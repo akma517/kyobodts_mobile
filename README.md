@@ -18,6 +18,7 @@
 4. material3 디자인을 적용 시 생각만큼 thema가 컨트롤되지 않는다. 그럼에도 material3 디자인이 예뻐서 적용시켰다.
 
 ## screenshots
+![Simulator Screenshot - iPhone 15 Pro Max - 2024-02-19 at 00 20 49](https://github.com/akma517/kyobodts_mobile/assets/66403979/dcf5da3f-e319-4419-b5e0-fbc799ee88ee)
 ![Simulator Screenshot - iPhone 15 Pro Max - 2024-02-18 at 23 59 55](https://github.com/akma517/kyobodts_mobile/assets/66403979/69a8ec5f-9891-448e-aba6-c752a02fbce1)
 ![Simulator Screenshot - iPhone 15 Pro Max - 2024-02-19 at 00 00 11](https://github.com/akma517/kyobodts_mobile/assets/66403979/eea437e8-068f-4b36-8d53-07da7f82e9f2)
 ![Simulator Screenshot - iPhone 15 Pro Max - 2024-02-19 at 00 00 33](https://github.com/akma517/kyobodts_mobile/assets/66403979/bd892ca9-a864-4377-9c72-3bcf7b082621)
