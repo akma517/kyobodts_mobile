@@ -57,6 +57,8 @@ class _MyHomePageState extends State<MyHomePage> {
   static const String GROUPWARE = "GROUPWARE";
   static const String AUTOLOGIN_GPRO = "AUTOLOGIN_GPRO";
   static const String AUTOLOGIN_GROUPWARE = "AUTOLOGIN_GROUPWARE";
+  double FABLeft = 0;
+  double FABTop = 0;
 
   Future<void> _getPref(String state) async {
     final SharedPreferences pref = await _pref;
@@ -138,6 +140,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
+    super.didChangeDependencies();
     super.initState();
     _loginInfo = _pref.then((SharedPreferences pref) {
       var tPref = pref.getStringList(GROUPWARE) ?? ["emptyID", "emptyPW"];
@@ -194,6 +197,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
                                   if (isAppLoading) {
                                     isAppLoading = false;
+                                    FABLeft = MediaQuery.of(context).size.width-60;
+                                    FABTop = MediaQuery.of(context).size.height-60;
                                     FlutterNativeSplash.remove();
                                   }
 
@@ -207,7 +212,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                 } else {
                                   isLoginPage = false;
                                 }
-                                setState(() {});
+                                setState(() {    
+                                  
+                                });
                               },
                               shouldOverrideUrlLoading:
                                   (controller, navigationAction) async {
@@ -242,33 +249,58 @@ class _MyHomePageState extends State<MyHomePage> {
                 })),
       ),
 
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          webViewController!.getUrl().then((url) async {
-            var sURL = url.toString();
-            if (sURL.contains(
-                'https://km.kyobodts.co.kr/common/security/login.do')) {
-              _setLoginInfo(GROUPWARE);
-            } else if (sURL.contains(
-                'https://kyobodts.wf.api.groupware.pro/v1/common/local/login')) {
-              _setLoginInfo(GPRO);
-            } else {
-              if (kIsWeb) {
-                return;
-              } else if (foundation.defaultTargetPlatform ==
-                  TargetPlatform.android) {
-                webViewController?.reload();
-              } else if (foundation.defaultTargetPlatform ==
-                  TargetPlatform.iOS) {
-                webViewController?.loadUrl(
-                    urlRequest:
-                        URLRequest(url: await webViewController!.getUrl()));
-              }
-            }
-          });
-        },
-        tooltip: 'autoLogin',
-        child: isLoginPage ? Icon(Icons.login) : Icon(Icons.refresh),
+      floatingActionButton: SafeArea(
+        child: Stack(
+          children: [Positioned(left:FABLeft,top:FABTop,
+            child: GestureDetector(onScaleUpdate: (details) {
+              setState(() {
+                FABLeft += details.focalPointDelta.dx;
+                FABTop += details.focalPointDelta.dy;
+                if (FABLeft <30){
+                  FABLeft = 30;
+                }
+                if (FABLeft >MediaQuery.of(context).size.width-60){
+                  FABLeft = MediaQuery.of(context).size.width-60;
+                }
+                if (FABTop <200){
+                  FABTop = 200;
+                }
+                if (FABTop >MediaQuery.of(context).size.height-60){
+                  FABTop = MediaQuery.of(context).size.height-60;
+                }
+              });
+            },
+              child: FloatingActionButton(
+                onPressed: () {
+                  webViewController!.getUrl().then((url) async {
+                    var sURL = url.toString();
+                    if (sURL.contains(
+                        'https://km.kyobodts.co.kr/common/security/login.do')) {
+                      _setLoginInfo(GROUPWARE);
+                    } else if (sURL.contains(
+                        'https://kyobodts.wf.api.groupware.pro/v1/common/local/login')) {
+                      _setLoginInfo(GPRO);
+                    } else {
+                      if (kIsWeb) {
+                        return;
+                      } else if (foundation.defaultTargetPlatform ==
+                          TargetPlatform.android) {
+                        webViewController?.reload();
+                      } else if (foundation.defaultTargetPlatform ==
+                          TargetPlatform.iOS) {
+                        webViewController?.loadUrl(
+                            urlRequest:
+                                URLRequest(url: await webViewController!.getUrl()));
+                      }
+                    }
+                  });
+                },
+                tooltip: 'autoLogin',
+                child: isLoginPage ? Icon(Icons.login) : Icon(Icons.refresh),
+              ),
+            ),
+          ),]
+        ),
       ), // This trailing comma makes auto-formatting nicer for build methods.
       bottomNavigationBar: BottomNavigationBar(
         showSelectedLabels: false,
