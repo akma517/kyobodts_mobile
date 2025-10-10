@@ -29,3 +29,44 @@
 ![Simulator Screenshot - iPhone 15 Pro Max - 2024-02-19 at 00 01 33 2](https://github.com/akma517/kyobodts_mobile/assets/66403979/9c2e5b48-248f-411f-b797-f0426e65ccf9)
 
 민감정보는 블라인드 처리
+
+---
+
+## 개발 환경 및 라이브러리 버전
+
+### Flutter & Dart 버전
+- **Flutter**: 3.35.6
+- **Dart SDK**: 3.6.0
+
+### 의존성 라이브러리 (고정 버전)
+```yaml
+dependencies:
+  cupertino_icons: 1.0.8
+  flutter_inappwebview: 6.1.5
+  shared_preferences: 2.3.2
+  url_launcher: 6.3.1
+  flutter_launcher_icons: 0.14.1
+  flutter_native_splash: 2.4.1
+
+dev_dependencies:
+  flutter_lints: 6.0.0
+```
+
+### Android 설정
+- **Min SDK**: 21 (Android 5.0)
+- **Target SDK**: 35 (Android 15)
+- **Gradle**: 8.10.2
+- **Android Gradle Plugin**: 8.7.2
+- **Kotlin**: 1.9.25
+
+### 환경 요구사항
+- **Dart SDK**: >=3.6.0 <4.0.0
+- **Android Studio**: Arctic Fox 이상
+- **Xcode**: 13.0 이상 (iOS 개발 시)
+
+### 빌드 명령어
+```bash
+flutter clean
+flutter pub get
+flutter build apk --release
+```
