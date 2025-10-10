@@ -13,7 +13,6 @@ import '../widgets/popup_webview.dart';
 import '../widgets/content_modal.dart';
 import '../utils/push_test_helper.dart';
 import '../models/push_message.dart';
-import '../services/firebase_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 bool isAppLoading = true;
@@ -75,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (kDebugMode) ..[
+          if (kDebugMode) ...[
             FloatingActionButton(
               heroTag: "show_token",
               mini: true,
