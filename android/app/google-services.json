@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "860019738433",
+    "project_id": "kyobodts-mobile",
+    "storage_bucket": "kyobodts-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:860019738433:android:804dc9750e2778a198c3c0",
+        "android_client_info": {
+          "package_name": "com.kyobo.kyobodts_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJHDPlvaKoR2FD_t6wyx_mPJYhyFh0guM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
