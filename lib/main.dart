@@ -9,12 +9,6 @@ void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   
-  try {
-    await FirebaseService().initialize();
-  } catch (e) {
-    print('Firebase 초기화 실패: $e');
-  }
-  
   runApp(const MyApp());
 }
 
@@ -31,7 +25,16 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    _setupPushHandling();
+    _initializeFirebase();
+  }
+
+  void _initializeFirebase() async {
+    try {
+      await FirebaseService().initialize();
+      _setupPushHandling();
+    } catch (e) {
+      print('Firebase 초기화 실패: $e');
+    }
   }
 
   void _setupPushHandling() {

@@ -111,11 +111,34 @@ class FirebaseService {
 
   Future<void> _getToken() async {
     if (_messaging == null) return;
-    final token = await _messaging!.getToken();
-    print('🔥 FCM Token: $token');
-    print('🔥 토큰 복사해서 Firebase Console에서 테스트하세요!');
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('fcm_token', token ?? '');
+    
+    try {
+      // iOS에서 APNS 토큰 먼저 확인
+      if (Platform.isIOS) {
+        // 시뮬레이터 체크
+        if (kDebugMode) {
+          print('🔥 iOS 시뮬레이터에서는 APNS 토큰을 사용할 수 없습니다.');
+          print('🔥 실제 디바이스에서 테스트해주세요.');
+          return;
+        }
+        
+        // APNS 토큰 대기
+        final apnsToken = await _messaging!.getAPNSToken();
+        if (apnsToken == null) {
+          print('🔥 APNS 토큰을 기다리는 중...');
+          await Future.delayed(const Duration(seconds: 3));
+        }
+      }
+      
+      final token = await _messaging!.getToken();
+      print('🔥 FCM Token: $token');
+      print('🔥 토큰 복사해서 Firebase Console에서 테스트하세요!');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('fcm_token', token ?? '');
+    } catch (e) {
+      print('🔥 토큰 획득 실패: $e');
+      // 토큰 획득 실패해도 앱은 계속 실행
+    }
   }
 
   void _handleForegroundMessage(RemoteMessage message) {
