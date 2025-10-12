@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'screens/home_screen.dart';
+import 'package:provider/provider.dart';
+import 'screens/login_screen.dart';
 import 'services/firebase_service.dart';
+import 'services/session_manager.dart';
 import 'widgets/content_modal.dart';
 import 'models/push_message.dart';
+import 'themes/theme_provider.dart';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +28,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    SessionManager.setNavigatorKey(_navigatorKey);
     _initializeFirebase();
   }
 
@@ -34,6 +38,9 @@ class _MyAppState extends State<MyApp> {
       _setupPushHandling();
     } catch (e) {
       print('Firebase 초기화 실패: $e');
+    } finally {
+      // Firebase 초기화 완료 후 스플래시 제거
+      FlutterNativeSplash.remove();
     }
   }
 
@@ -76,18 +83,19 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: _navigatorKey,
-      title: '교보DTS',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-        ),
-        dialogTheme: const DialogThemeData(surfaceTintColor: Colors.white),
-        useMaterial3: true,
+    return ChangeNotifierProvider(
+      create: (context) => ThemeProvider(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            navigatorKey: _navigatorKey,
+            title: '교보DTS',
+            debugShowCheckedModeBanner: false,
+            theme: themeProvider.themeData,
+            home: const LoginScreen(),
+          );
+        },
       ),
-      home: const HomeScreen(),
-     );
+    );
   }
 }

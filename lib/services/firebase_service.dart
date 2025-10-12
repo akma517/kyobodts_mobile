@@ -113,31 +113,41 @@ class FirebaseService {
     if (_messaging == null) return;
     
     try {
-      // iOS에서 APNS 토큰 먼저 확인
+      String? token;
+      
       if (Platform.isIOS) {
-        // 시뮬레이터 체크
-        if (kDebugMode) {
-          print('🔥 iOS 시뮬레이터에서는 APNS 토큰을 사용할 수 없습니다.');
-          print('🔥 실제 디바이스에서 테스트해주세요.');
-          return;
-        }
+        print('🔥 iOS 플랫폼 - APNS 토큰 대기 중...');
         
-        // APNS 토큰 대기
-        final apnsToken = await _messaging!.getAPNSToken();
-        if (apnsToken == null) {
-          print('🔥 APNS 토큰을 기다리는 중...');
-          await Future.delayed(const Duration(seconds: 3));
+        // APNS 토큰 대기 (최대 15초)
+        for (int i = 0; i < 15; i++) {
+          final apnsToken = await _messaging!.getAPNSToken();
+          if (apnsToken != null) {
+            print('🔥 APNS 토큰 획득 성공: ${apnsToken.substring(0, 20)}...');
+            break;
+          }
+          print('🔥 APNS 토큰 대기 중... (${i + 1}/15)');
+          await Future.delayed(const Duration(seconds: 1));
         }
       }
       
-      final token = await _messaging!.getToken();
-      print('🔥 FCM Token: $token');
-      print('🔥 토큰 복사해서 Firebase Console에서 테스트하세요!');
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('fcm_token', token ?? '');
+      // FCM 토큰 요청
+      token = await _messaging!.getToken();
+      
+      if (token != null && token.isNotEmpty) {
+        print('🔥 FCM Token 획득 성공: ${token.substring(0, 30)}...');
+        print('🔥 전체 FCM Token: $token');
+        
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('fcm_token', token);
+        print('🔥 토큰 SharedPreferences에 저장 완료');
+      } else {
+        print('🔥 FCM 토큰을 받지 못했습니다.');
+      }
     } catch (e) {
-      print('🔥 토큰 획득 실패: $e');
-      // 토큰 획득 실패해도 앱은 계속 실행
+      print('🔥 FCM 토큰 획득 실패: $e');
+      if (e.toString().contains('apns-token-not-set')) {
+        print('🔥 APNS 토큰이 설정되지 않았습니다. 실제 디바이스에서 테스트해주세요.');
+      }
     }
   }
 

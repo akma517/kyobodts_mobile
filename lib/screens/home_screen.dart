@@ -11,6 +11,7 @@ import '../widgets/custom_bottom_navigation.dart';
 import '../widgets/custom_floating_action_button.dart';
 import '../widgets/popup_webview.dart';
 import '../widgets/content_modal.dart';
+import '../widgets/common_app_bar.dart';
 import '../utils/push_test_helper.dart';
 import '../models/push_message.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -40,6 +41,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: const CommonAppBar(
+        title: '교보DTS',
+        showBackButton: false,
+      ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -99,7 +104,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: CustomBottomNavigation(
         webViewController: _webViewController,
-        onRefresh: () => setState(() {}),
+        onRefresh: () {
+          if (mounted) setState(() {});
+        },
       ),
     );
   }
@@ -121,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final systemType = WebViewService.getSystemTypeFromUrl(sURL);
     final isLoginPage = WebViewService.isLoginPage(sURL);
     
-    if (_isLoginPage != isLoginPage) {
+    if (_isLoginPage != isLoginPage && mounted) {
       setState(() {
         _isLoginPage = isLoginPage;
       });
