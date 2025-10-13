@@ -3,10 +3,15 @@ import '../models/comment.dart';
 import '../models/attachment.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
+import 'comment_service.dart';
 
 class PostService {
   final ApiService _apiService = ApiService();
   final AuthService _authService = AuthService();
+  final CommentService _commentService = CommentService();
+  
+  // 댓글 참조를 저장하기 위한 맵
+  final Map<String, Comment> _commentCache = {};
   
   bool get _isTestAccount {
     final isTest = _authService.isTestAccount;
@@ -128,6 +133,10 @@ class PostService {
       author: '홍길동',
       content: '새해 복 많이 받으세요!',
       createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+      bbsId: 'B0000111',
+      docNumber: 1,
+      userId: 'test001',
+      seqno: 1,
     ),
     Comment(
       id: '2',
@@ -135,6 +144,10 @@ class PostService {
       author: '홍길동',
       content: '올해도 잘 부탁드립니다.',
       createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
+      bbsId: 'B0000111',
+      docNumber: 1,
+      userId: 'test001',
+      seqno: 2,
     ),
     Comment(
       id: '3',
@@ -142,6 +155,10 @@ class PostService {
       author: '홍길동',
       content: 'DX 교육 기대됩니다!',
       createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      bbsId: 'B0000039',
+      docNumber: 2,
+      userId: 'test001',
+      seqno: 1,
     ),
   ];
 
@@ -213,14 +230,35 @@ class PostService {
     }
   }
 
-  Future<List<Comment>> getComments(String postId) async {
+  Future<List<Comment>> getComments(String postId, {String? bbsId}) async {
+    print('PostService.getComments: START - postId: $postId, bbsId: $bbsId, isTestAccount: $_isTestAccount');
+    
     if (_isTestAccount) {
       await Future.delayed(const Duration(milliseconds: 200));
       
-      return _mockComments.where((comment) => comment.postId == postId).toList();
+      final comments = _mockComments.where((comment) => comment.postId == postId).toList();
+      print('PostService.getComments: Returning ${comments.length} mock comments');
+      
+      // 댓글 참조 저장
+      for (final comment in comments) {
+        _commentCache[comment.id] = comment;
+      }
+      
+      return comments;
     } else {
-      // 실제 API 호출
-      return await _apiService.getComments(postId);
+      // bbsId가 제공되지 않은 경우 기본값 사용
+      final actualBbsId = bbsId ?? 'B0000111';
+      print('PostService.getComments: Calling API with actualBbsId: $actualBbsId');
+      
+      final comments = await _apiService.getComments(postId, actualBbsId);
+      print('PostService.getComments: API returned ${comments.length} comments');
+      
+      // 댓글 참조 저장
+      for (final comment in comments) {
+        _commentCache[comment.id] = comment;
+      }
+      
+      return comments;
     }
   }
 
@@ -237,18 +275,29 @@ class PostService {
           author: _mockComments[index].author,
           content: newContent,
           createdAt: _mockComments[index].createdAt,
+          bbsId: _mockComments[index].bbsId,
+          docNumber: _mockComments[index].docNumber,
+          userId: _mockComments[index].userId,
+          seqno: _mockComments[index].seqno,
         );
         return true;
       }
       return false;
     } else {
-      // 실제 API 호출
-      try {
-        await _apiService.updateComment(commentId, newContent);
-        return true;
-      } catch (e) {
+      // 실제 API 호출 - CommentService 사용
+      final comment = _commentCache[commentId];
+      if (comment == null) {
+        print('PostService.updateComment: Comment not found in cache: $commentId');
         return false;
       }
+      
+      return await _commentService.updateComment(
+        bbsId: comment.bbsId,
+        docNumber: comment.docNumber,
+        reSeqno: comment.seqno,
+        content: newContent,
+        userId: comment.userId,
+      );
     }
   }
 
@@ -261,18 +310,30 @@ class PostService {
       _mockComments.removeWhere((comment) => comment.id == commentId);
       return _mockComments.length < initialLength;
     } else {
-      // 실제 API 호출
-      try {
-        await _apiService.deleteComment(commentId);
-        return true;
-      } catch (e) {
+      // 실제 API 호출 - CommentService 사용
+      final comment = _commentCache[commentId];
+      if (comment == null) {
+        print('PostService.deleteComment: Comment not found in cache: $commentId');
         return false;
       }
+      
+      final success = await _commentService.deleteComment(
+        bbsId: comment.bbsId,
+        docNumber: comment.docNumber,
+        reSeqno: comment.seqno,
+        userId: comment.userId,
+      );
+      
+      if (success) {
+        _commentCache.remove(commentId);
+      }
+      
+      return success;
     }
   }
 
   // 댓글 추가
-  Future<Comment?> addComment(String postId, String content) async {
+  Future<Comment?> addComment(String postId, String content, {String? bbsId}) async {
     final currentUser = _authService.currentUser;
     if (currentUser == null) return null;
 
@@ -285,17 +346,22 @@ class PostService {
         author: currentUser.name,
         content: content,
         createdAt: DateTime.now(),
+        bbsId: bbsId ?? 'B0000111',
+        docNumber: int.tryParse(postId) ?? 0,
+        userId: currentUser.id,
+        seqno: _mockComments.length + 1,
       );
       
       _mockComments.add(newComment);
       return newComment;
     } else {
-      // 실제 API 호출
-      try {
-        return await _apiService.addComment(postId, content);
-      } catch (e) {
-        return null;
-      }
+      // 실제 API 호출 - CommentService 사용
+      final actualBbsId = bbsId ?? 'B0000111';
+      return await _commentService.createComment(
+        bbsId: actualBbsId,
+        docNumber: int.tryParse(postId) ?? 0,
+        content: content,
+      );
     }
   }
   

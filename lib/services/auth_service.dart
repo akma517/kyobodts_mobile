@@ -143,15 +143,24 @@ class AuthService {
   }
 
   Future<void> logout() async {
-    // test 계정이 아닌 경우 로그아웃 API 호출
-    if (_currentUser?.id != 'test') {
-      await _logoutWithAPI();
+    try {
+      // test 계정이 아닌 경우 로그아웃 API 호출
+      if (_currentUser?.id != 'test') {
+        await _logoutWithAPI();
+      }
+    } catch (e) {
+      print('AuthService.logout: API error: $e');
+    } finally {
+      // 에러 발생 여부와 관계없이 로컬 데이터 정리
+      _currentUser = null;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('login_id');
+        await prefs.remove('login_password');
+      } catch (e) {
+        print('AuthService.logout: SharedPreferences error: $e');
+      }
     }
-    
-    _currentUser = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('login_id');
-    await prefs.remove('login_password');
   }
   
   Future<void> _logoutWithAPI() async {
@@ -164,8 +173,10 @@ class AuthService {
       );
       
       print('Logout API response: ${response.statusCode}');
+      // 로그아웃은 응답 결과와 관계없이 성공으로 처리
     } catch (e) {
       print('Logout API error: $e');
+      // 로그아웃은 에러가 발생해도 성공으로 처리
     }
   }
 

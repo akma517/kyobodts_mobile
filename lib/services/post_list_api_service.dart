@@ -17,7 +17,11 @@ class PostListApiService {
       case '회사소식':
         return 172;
       case '사우소식·자유게시판':
+        return 164; // 기본적으로 사우소식 ctid 사용
+      case '사우소식':
         return 164;
+      case '자유게시판':
+        return 20;
       case '디지털에듀':
         return 313;
       default:
@@ -25,7 +29,7 @@ class PostListApiService {
     }
   }
 
-  Future<List<PostListItem>> getSectionPosts(String section, {int page = 1, int limit = 20}) async {
+  Future<List<PostListItem>> getSectionPosts(String section, {int page = 1, int limit = 10, String searchCondition = '', String searchString = ''}) async {
     print('=== PostListApiService.getSectionPosts START ===');
     print('PostListApiService.getSectionPosts: section = "$section"');
     print('PostListApiService.getSectionPosts: page = $page, limit = $limit');
@@ -36,7 +40,13 @@ class PostListApiService {
       final ctid = _getCtidBySection(section);
       print('PostListApiService.getSectionPosts: CTID mapped - section: "$section" -> ctid: $ctid');
       
-      final url = 'https://km.kyobodts.co.kr/bbs/bbsFinder.do?method=list&coid=156&ctid=$ctid';
+      String url = 'https://km.kyobodts.co.kr/bbs/bbsFinder.do?method=list&coid=156&ctid=$ctid&page=$page&rows=$limit';
+      
+      if (searchString.isNotEmpty && searchCondition.isNotEmpty) {
+        url += '&searchCondition=$searchCondition&searchString=${Uri.encodeComponent(searchString)}';
+      }
+      
+      print('PostListApiService.getSectionPosts: searchCondition = $searchCondition, searchString = $searchString');
       print('PostListApiService.getSectionPosts: API URL = $url');
       print('PostListApiService.getSectionPosts: Current cookies count = ${_cookies.length}');
       
@@ -46,14 +56,7 @@ class PostListApiService {
         print('PostListApiService.getSectionPosts: No cookies available');
       }
       
-      final response = await ApiService.httpClient.get(
-        Uri.parse(url),
-        headers: {
-          'Accept': 'application/json, text/html, */*',
-          'User-Agent': 'Mozilla/5.0 (compatible; Flutter App)',
-          if (_cookies.isNotEmpty) 'Cookie': _cookies.entries.map((e) => '${e.key}=${e.value}').join('; '),
-        },
-      );
+      final response = await ApiService.makeRequest(url);
       
       final requestTime = DateTime.now().difference(startTime).inMilliseconds;
       print('PostListApiService.getSectionPosts: HTTP request took ${requestTime}ms');
@@ -85,9 +88,17 @@ class PostListApiService {
             var items = apiResponse.rows;
             print('PostListApiService.getSectionPosts: Before sorting - ${items.length} items');
             
-            // 날짜별 정렬 전 로깅
+            // 날짜별 정렬 전 로깅 및 실제 API 데이터 확인
             for (int i = 0; i < items.length && i < 3; i++) {
-              print('PostListApiService.getSectionPosts: Item $i - docNumber: ${items[i].docNumber}, subject: "${items[i].docSubject}", date: ${items[i].docRegDate}');
+              print('PostListApiService.getSectionPosts: Item $i - docNumber: ${items[i].docNumber}, subject: "${items[i].docSubject}", RAW docRegdate: "${items[i].docRegdate}", parsed createdAt: ${items[i].createdAt}');
+            }
+            
+            // 원본 JSON 데이터에서 docRegdate 확인
+            if (data['rows'] != null && (data['rows'] as List).isNotEmpty) {
+              for (int i = 0; i < (data['rows'] as List).length && i < 3; i++) {
+                final rawItem = data['rows'][i];
+                print('PostListApiService.getSectionPosts: RAW JSON Item $i - docRegdate: "${rawItem['docRegdate']}"');
+              }
             }
             
             items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -111,15 +122,6 @@ class PostListApiService {
           }
         } else {
           print('PostListApiService.getSectionPosts: Response is NOT JSON format');
-          if (response.body.toLowerCase().contains('<html>')) {
-            print('PostListApiService.getSectionPosts: Response contains HTML - handling session');
-            final sessionHandled = await SessionManager().handleHtmlResponse();
-            
-            if (sessionHandled) {
-              print('PostListApiService.getSectionPosts: Session handled, retrying API call');
-              return await getSectionPosts(section, page: page, limit: limit);
-            }
-          }
           print('=== PostListApiService.getSectionPosts NOT JSON ===');
           return [];
         }

@@ -18,17 +18,39 @@ class _PostListScreenState extends State<PostListScreen> {
   final PostListApiService _apiService = PostListApiService();
   final AuthService _authService = AuthService();
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   List<PostListItem> posts = [];
   List<PostListItem> filteredPosts = [];
   bool isLoading = true;
+  bool isLoadingMore = false;
+  bool hasMoreData = true;
+  int currentPage = 1;
   String searchType = '제목';
   final List<String> searchTypes = ['제목', '제목+내용', '게시자'];
+  String searchCondition = 'docSubject';
+  String searchString = '';
 
   @override
   void initState() {
     super.initState();
     print('PostListScreen.initState: Initializing for section "${widget.section}"');
+    _scrollController.addListener(_onScroll);
     _loadPosts();
+  }
+
+  void _onScroll() {
+    final position = _scrollController.position;
+    final threshold = position.maxScrollExtent - 200;
+    
+    print('_onScroll: pixels=${position.pixels.toInt()}, maxExtent=${position.maxScrollExtent.toInt()}, threshold=${threshold.toInt()}');
+    print('_onScroll: isLoadingMore=$isLoadingMore, hasMoreData=$hasMoreData, searchString=$searchString');
+    
+    if (position.pixels >= threshold) {
+      if (!isLoadingMore && hasMoreData) {
+        print('_onScroll: Triggering _loadMorePosts()');
+        _loadMorePosts();
+      }
+    }
   }
 
   void _loadPosts() async {
@@ -38,7 +60,11 @@ class _PostListScreenState extends State<PostListScreen> {
     print('PostListScreen._loadPosts: currentUser = ${_authService.currentUser?.id}');
     
     if (mounted) {
-      setState(() => isLoading = true);
+      setState(() {
+        isLoading = true;
+        currentPage = 1;
+        hasMoreData = true;
+      });
       print('PostListScreen._loadPosts: Loading state set to true');
     }
     
@@ -53,7 +79,7 @@ class _PostListScreenState extends State<PostListScreen> {
     } else {
       print('PostListScreen._loadPosts: Calling REAL API');
       try {
-        loadedPosts = await _apiService.getSectionPosts(widget.section);
+        loadedPosts = await _apiService.getSectionPosts(widget.section, page: currentPage, limit: 10, searchCondition: searchCondition, searchString: searchString);
         print('PostListScreen._loadPosts: API call completed - ${loadedPosts.length} posts received');
       } catch (e) {
         print('PostListScreen._loadPosts: API call failed - $e');
@@ -70,6 +96,7 @@ class _PostListScreenState extends State<PostListScreen> {
         posts = loadedPosts;
         filteredPosts = loadedPosts;
         isLoading = false;
+        hasMoreData = loadedPosts.length >= 10;
       });
       print('PostListScreen._loadPosts: State updated - posts: ${posts.length}, isLoading: false');
     } else {
@@ -78,55 +105,106 @@ class _PostListScreenState extends State<PostListScreen> {
     
     print('=== PostListScreen._loadPosts END ===');
   }
+
+  void _loadMorePosts() async {
+    if (isLoadingMore || !hasMoreData) return;
+    
+    print('=== PostListScreen._loadMorePosts START ===');
+    print('PostListScreen._loadMorePosts: currentPage = $currentPage');
+    
+    if (mounted) {
+      setState(() {
+        isLoadingMore = true;
+        currentPage++;
+      });
+    }
+    
+    List<PostListItem> newPosts = [];
+    
+    if (_authService.isTestAccount) {
+      print('PostListScreen._loadMorePosts: Using MOCK data');
+      await Future.delayed(const Duration(milliseconds: 500));
+      newPosts = _getMockPostsForPage(currentPage);
+    } else {
+      print('PostListScreen._loadMorePosts: Calling REAL API for page $currentPage');
+      try {
+        newPosts = await _apiService.getSectionPosts(widget.section, page: currentPage, limit: 10, searchCondition: searchCondition, searchString: searchString);
+        print('PostListScreen._loadMorePosts: API call completed - ${newPosts.length} new posts received');
+      } catch (e) {
+        print('PostListScreen._loadMorePosts: API call failed - $e');
+        newPosts = [];
+      }
+    }
+    
+    if (mounted) {
+      setState(() {
+        if (newPosts.isNotEmpty) {
+          posts.addAll(newPosts);
+          filteredPosts = posts;
+        }
+        hasMoreData = newPosts.length >= 10 || (_authService.isTestAccount && currentPage < 3);
+        isLoadingMore = false;
+      });
+      print('PostListScreen._loadMorePosts: State updated - total posts: ${posts.length}, hasMoreData: $hasMoreData');
+    }
+    
+    print('=== PostListScreen._loadMorePosts END ===');
+  }
   
   List<PostListItem> _getMockPosts() {
-    return [
-      PostListItem(
-        rownumber: 1,
+    return _getMockPostsForPage(1);
+  }
+  
+  List<PostListItem> _getMockPostsForPage(int page, [int count = 10]) {
+    final baseNumber = 13000 - ((page - 1) * count);
+    final baseDate = DateTime.now().subtract(Duration(days: (page - 1) * 7));
+    
+    return List.generate(count, (index) {
+      final docNumber = baseNumber - index;
+      final date = baseDate.subtract(Duration(days: index));
+      final formattedDate = '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
+      
+      return PostListItem(
+        rownumber: ((page - 1) * count) + index + 1,
         ctid: 321,
         bbsId: 'B0000111',
-        docNumber: 12902,
-        docSubject: '2024년 신년 인사',
-        docRefCnt: 150,
-        docRegDate: '2025-01-15',
-        userName: '대표이사',
-        replayCt: 5,
-      ),
-      PostListItem(
-        rownumber: 2,
-        ctid: 313,
-        bbsId: 'B0000039',
-        docNumber: 12901,
-        docSubject: '디지털 전환 교육 안내',
-        docRefCnt: 89,
-        docRegDate: '2025-01-14',
-        userName: '교육팀',
-        replayCt: 12,
-      ),
-    ];
+        docNumber: docNumber,
+        docSubject: 'Mock 게시글 $docNumber - 페이지 $page',
+        docRefCnt: 50 + (index * 5),
+        docRegdate: formattedDate,
+        userName: ['관리자', '교육팀', '개발팀', '기획팀'][index % 4],
+        replayCt: index % 10,
+        docText: 'Mock 게시글 내용입니다. 페이지 $page의 $index번째 게시글입니다.',
+      );
+    });
   }
 
-  void _searchPosts(String query) {
-    if (!mounted) return;
+  void _performSearch() {
+    final query = _searchController.text.trim();
     
-    if (query.isEmpty) {
-      setState(() => filteredPosts = posts);
-      return;
-    }
-
     setState(() {
-      filteredPosts = posts.where((post) {
-        switch (searchType) {
-          case '제목':
-            return post.docSubject.toLowerCase().contains(query.toLowerCase());
-          case '제목+내용':
-            return post.docSubject.toLowerCase().contains(query.toLowerCase());
-          case '게시자':
-            return post.userName.toLowerCase().contains(query.toLowerCase());
-          default:
-            return false;
-        }
-      }).toList();
+      searchString = query;
+      currentPage = 1;
+      hasMoreData = true;
+    });
+    
+    _loadPosts();
+  }
+  
+  void _updateSearchCondition(String newSearchType) {
+    setState(() {
+      searchType = newSearchType;
+      switch (newSearchType) {
+        case '제목':
+          searchCondition = 'docSubject';
+          break;
+        case '제목+내용':
+          searchCondition = 'docText';
+          break;
+        case '게시자':
+          searchCondition = 'userName';
+          break;
+      }
     });
   }
 
@@ -201,8 +279,7 @@ class _PostListScreenState extends State<PostListScreen> {
                         );
                       }).toList(),
                       onChanged: (value) {
-                        setState(() => searchType = value!);
-                        _searchPosts(_searchController.text);
+                        _updateSearchCondition(value!);
                       },
                     ),
                   ),
@@ -242,8 +319,21 @@ class _PostListScreenState extends State<PostListScreen> {
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
-                      onChanged: _searchPosts,
+                      onSubmitted: (_) => _performSearch(),
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: _performSearch,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    child: const Text('검색'),
                   ),
                 ],
               ),
@@ -256,12 +346,25 @@ class _PostListScreenState extends State<PostListScreen> {
                       : RefreshIndicator(
                           onRefresh: () async {
                             print('PostListScreen: Pull-to-refresh triggered');
+                            _searchController.clear();
+                            setState(() {
+                              searchString = '';
+                              currentPage = 1;
+                              hasMoreData = true;
+                            });
                             return _loadPosts();
                           },
                           child: ListView.builder(
+                            controller: _scrollController,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: filteredPosts.length,
+                            itemCount: filteredPosts.length + (isLoadingMore ? 1 : 0),
                             itemBuilder: (context, index) {
+                              if (index == filteredPosts.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Center(child: CircularProgressIndicator()),
+                                );
+                              }
                               final post = filteredPosts[index];
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
@@ -401,8 +504,7 @@ class _PostListScreenState extends State<PostListScreen> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => PostDetailScreen(
-                                        postId: post.docNumber.toString(),
-                                        section: widget.section,
+                                        post: post.toPost(widget.section),
                                       ),
                                     ),
                                   );
@@ -424,6 +526,7 @@ class _PostListScreenState extends State<PostListScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 }

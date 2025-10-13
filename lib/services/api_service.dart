@@ -46,6 +46,46 @@ class ApiService {
     }
   }
 
+  // 중앙화된 HTTP 요청 처리 (HTML 응답 자동 감지 및 재시도)
+  static Future<http.Response> makeRequest(String url, {Map<String, String>? headers}) async {
+    print('ApiService.makeRequest: $url');
+    
+    final defaultHeaders = {
+      'Accept': 'application/json, text/html, */*',
+      'User-Agent': 'Mozilla/5.0 (compatible; Flutter App)',
+      if (_cookies.isNotEmpty) 'Cookie': _cookies.entries.map((e) => '${e.key}=${e.value}').join('; '),
+      ...?headers,
+    };
+    
+    final response = await httpClient.get(Uri.parse(url), headers: defaultHeaders);
+    
+    print('ApiService.makeRequest: Response status ${response.statusCode}');
+    print('ApiService.makeRequest: Content-Type: ${response.headers['content-type']}');
+    
+    if (response.statusCode == 200) {
+      final contentType = response.headers['content-type'] ?? '';
+      final trimmedBody = response.body.trim();
+      
+      // HTML 응답 감지: Content-Type이 text/html이거나 본문에 HTML 태그가 있는 경우
+      bool isHtmlResponse = contentType.toLowerCase().contains('text/html') || 
+                           trimmedBody.toLowerCase().contains('<html>') ||
+                           trimmedBody.toLowerCase().contains('<!doctype html>');
+      
+      // JSON이 아닌 경우에만 HTML 감지 처리
+      if (!trimmedBody.startsWith('{') && !trimmedBody.startsWith('[') && isHtmlResponse) {
+        print('ApiService.makeRequest: HTML response detected (Content-Type: $contentType)');
+        final sessionHandled = await SessionManager().handleHtmlResponse();
+        
+        if (sessionHandled) {
+          print('ApiService.makeRequest: Session handled, retrying request');
+          return await makeRequest(url, headers: headers);
+        }
+      }
+    }
+    
+    return response;
+  }
+
   Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> data) async {
     final response = await http.post(
       Uri.parse('$baseUrl$endpoint'),
@@ -81,14 +121,7 @@ class ApiService {
     }
     
     try {
-      final response = await httpClient.get(
-        Uri.parse('https://km.kyobodts.co.kr/bbs/bbs.do?method=mainBbsList&coid=156&ctid=158'),
-        headers: {
-          'Accept': 'application/json, text/html, */*',
-          'User-Agent': 'Mozilla/5.0 (compatible; Flutter App)',
-          if (_cookies.isNotEmpty) 'Cookie': _cookies.entries.map((e) => '${e.key}=${e.value}').join('; '),
-        },
-      );
+      final response = await makeRequest('https://km.kyobodts.co.kr/bbs/bbs.do?method=mainBbsList&coid=156&ctid=158');
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -104,14 +137,7 @@ class ApiService {
   // 최근 게시글 조회 (교보DTS API)
   Future<List<Post>> getRecentPosts(String section, {int limit = 5}) async {
     try {
-      final response = await httpClient.get(
-        Uri.parse('https://km.kyobodts.co.kr/bbs/bbs.do?method=mainBbsList&coid=156&ctid=158'),
-        headers: {
-          'Accept': 'application/json, text/html, */*',
-          'User-Agent': 'Mozilla/5.0 (compatible; Flutter App)',
-          if (_cookies.isNotEmpty) 'Cookie': _cookies.entries.map((e) => '${e.key}=${e.value}').join('; '),
-        },
-      );
+      final response = await makeRequest('https://km.kyobodts.co.kr/bbs/bbs.do?method=mainBbsList&coid=156&ctid=158');
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -179,6 +205,18 @@ class ApiService {
           final post = Post.fromApiJson(item);
           // ctid 기반으로 섹션 결정
           String section = _getSectionByCtid(post.ctid);
+          
+          // 사우소식·자유게시판의 경우 실제 ctid 값 확인 및 수정
+          int actualCtid = post.ctid;
+          if (listKey == 'bbs02List') {
+            // bbs02List에서 오는 게시글들의 ctid를 실제 값으로 매핑
+            // API 응답에서 ctid가 잘못 설정되어 있을 수 있으므로 원본 데이터 확인
+            if (item['ctid'] != null) {
+              actualCtid = int.tryParse(item['ctid'].toString()) ?? post.ctid;
+            }
+            section = _getSectionByCtid(actualCtid);
+          }
+          
           return Post(
             id: post.id,
             title: post.title,
@@ -190,7 +228,7 @@ class ApiService {
             hasAttachment: post.hasAttachment,
             section: section,
             attachments: post.attachments,
-            ctid: post.ctid,
+            ctid: actualCtid,
             docNumber: post.docNumber,
             fileCnt: post.fileCnt,
             bbsId: post.bbsId,
@@ -255,14 +293,7 @@ class ApiService {
       final url = 'https://km.kyobodts.co.kr/bbs/bbsFinder.do?method=list&coid=156&ctid=$ctid';
       print('ApiService.getSectionPosts: Calling API - $url');
       
-      final response = await httpClient.get(
-        Uri.parse(url),
-        headers: {
-          'Accept': 'application/json, text/html, */*',
-          'User-Agent': 'Mozilla/5.0 (compatible; Flutter App)',
-          if (_cookies.isNotEmpty) 'Cookie': _cookies.entries.map((e) => '${e.key}=${e.value}').join('; '),
-        },
-      );
+      final response = await makeRequest(url);
       
       print('ApiService.getSectionPosts: Response status: ${response.statusCode}');
       print('ApiService.getSectionPosts: Response headers: ${response.headers}');
@@ -288,15 +319,6 @@ class ApiService {
           }
         } else {
           print('ApiService.getSectionPosts: Response is not JSON format');
-          if (response.body.toLowerCase().contains('<html>') || response.body.toLowerCase().contains('login')) {
-            print('ApiService.getSectionPosts: Received HTML response, handling session');
-            final sessionHandled = await SessionManager().handleHtmlResponse();
-            
-            if (sessionHandled) {
-              print('ApiService.getSectionPosts: Session handled, retrying API call');
-              return await getSectionPosts(section, page: page, limit: limit);
-            }
-          }
           return [];
         }
       } else {
@@ -358,18 +380,60 @@ class ApiService {
     }
   }
 
-  // 댓글 목록 조회
-  Future<List<Comment>> getComments(String postId) async {
-    final response = await get('/posts/$postId/comments');
-    final List<dynamic> commentsJson = response['data'];
-    
-    return commentsJson.map((json) => Comment(
-      id: json['id'],
-      postId: json['postId'],
-      author: json['author'],
-      content: json['content'],
-      createdAt: DateTime.parse(json['createdAt']),
-    )).toList();
+  // 댓글 목록 조회 (교보DTS API)
+  Future<List<Comment>> getComments(String postId, String bbsId) async {
+    print('ApiService.getComments: START - postId: $postId, bbsId: $bbsId');
+    try {
+      final url = 'https://km.kyobodts.co.kr/bbs/bbsDocReply.do?method=listView&bbsId=$bbsId&docNumber=$postId';
+      print('ApiService.getComments: Calling API - $url');
+      print('ApiService.getComments: Current cookies: $_cookies');
+      
+      final response = await makeRequest(url);
+      
+      print('ApiService.getComments: Response status: ${response.statusCode}');
+      print('ApiService.getComments: Response body length: ${response.body.length}');
+      
+      if (response.statusCode == 200) {
+        final bodyPreview = response.body.length > 500 ? response.body.substring(0, 500) : response.body;
+        print('ApiService.getComments: Response body preview: $bodyPreview');
+        
+        final trimmedBody = response.body.trim();
+        if (trimmedBody.startsWith('{') || trimmedBody.startsWith('[')) {
+          try {
+            final data = jsonDecode(response.body);
+            print('ApiService.getComments: JSON parsing successful');
+            print('ApiService.getComments: Response keys: ${data.keys.toList()}');
+            
+            if (data['replyList'] != null) {
+              final List<dynamic> replyList = data['replyList'];
+              print('ApiService.getComments: Found ${replyList.length} comments');
+              
+              final comments = replyList.map((json) {
+                print('ApiService.getComments: Parsing comment - author: ${json['replyUserName']}, userId: ${json['replyUserId']}, content: ${json['reText']}');
+                return Comment.fromApiJson(json);
+              }).toList();
+              
+              print('ApiService.getComments: Successfully parsed ${comments.length} comments');
+              return comments;
+            } else {
+              print('ApiService.getComments: No replyList found in response');
+            }
+          } catch (jsonError) {
+            print('ApiService.getComments: JSON parsing failed - $jsonError');
+            return [];
+          }
+        } else {
+          print('ApiService.getComments: Response is not JSON format - HTML response detected');
+          return [];
+        }
+      } else {
+        print('ApiService.getComments: HTTP error ${response.statusCode}');
+      }
+      return [];
+    } catch (e) {
+      print('ApiService.getComments: Exception - $e');
+      return [];
+    }
   }
 
   // 댓글 수정
@@ -400,6 +464,10 @@ class ApiService {
       author: commentJson['author'],
       content: commentJson['content'],
       createdAt: DateTime.parse(commentJson['createdAt']),
+      bbsId: commentJson['bbsId'] ?? '',
+      docNumber: commentJson['docNumber'] ?? 0,
+      userId: commentJson['userId'] ?? '',
+      seqno: commentJson['seqno'] ?? 0,
     );
   }
 
@@ -410,14 +478,7 @@ class ApiService {
       print('ApiService.getAllSectionPosts: Calling API...');
       print('ApiService.getAllSectionPosts: Current cookies: $_cookies');
       
-      final response = await httpClient.get(
-        Uri.parse('https://km.kyobodts.co.kr/bbs/bbs.do?method=mainBbsList&coid=156&ctid=158'),
-        headers: {
-          'Accept': 'application/json, text/html, */*',
-          'User-Agent': 'Mozilla/5.0 (compatible; Flutter App)',
-          if (_cookies.isNotEmpty) 'Cookie': _cookies.entries.map((e) => '${e.key}=${e.value}').join('; '),
-        },
-      );
+      final response = await makeRequest('https://km.kyobodts.co.kr/bbs/bbs.do?method=mainBbsList&coid=156&ctid=158');
       
       print('ApiService.getAllSectionPosts: Request sent with cookies: ${_cookies.entries.map((e) => '${e.key}=${e.value}').join('; ')}');
       
@@ -462,18 +523,6 @@ class ApiService {
         } else {
           print('ApiService.getAllSectionPosts: Response is not JSON format');
           print('ApiService.getAllSectionPosts: Content-Type: ${response.headers['content-type']}');
-          
-          // HTML 응답인 경우 로그인 페이지일 가능성
-          if (response.body.toLowerCase().contains('<html>') || response.body.toLowerCase().contains('login')) {
-            print('ApiService.getAllSectionPosts: Received HTML response, handling session');
-            final sessionHandled = await SessionManager().handleHtmlResponse();
-            
-            if (sessionHandled) {
-              print('ApiService.getAllSectionPosts: Session handled, retrying API call');
-              return await getAllSectionPosts(limit: limit);
-            }
-          }
-          
           return {};
         }
       } else {

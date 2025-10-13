@@ -192,14 +192,6 @@ class _LoginScreenState extends State<LoginScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           FloatingActionButton(
-            heroTag: "test_api",
-            mini: true,
-            onPressed: _testApiCall,
-            backgroundColor: Colors.green,
-            child: const Icon(Icons.api),
-          ),
-          const SizedBox(height: 8),
-          FloatingActionButton(
             heroTag: "show_token",
             mini: true,
             onPressed: _showFCMToken,
@@ -244,9 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _testApiCall() async {
-    await ApiService.testApiCall();
-  }
+
 
   void _testPushNotification() async {
     final data = PushTestHelper.getSamplePushData();

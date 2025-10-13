@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/post.dart';
 import '../models/push_message.dart';
 import '../services/post_service.dart';
+import '../services/post_list_api_service.dart';
 import '../services/auth_service.dart';
+import '../services/session_manager.dart';
 import '../themes/theme_provider.dart';
 import '../themes/app_theme.dart';
 import '../widgets/content_modal.dart';
@@ -24,6 +26,7 @@ class NewHomeScreen extends StatefulWidget {
 
 class _NewHomeScreenState extends State<NewHomeScreen> {
   final PostService _postService = PostService();
+  final PostListApiService _postListApiService = PostListApiService();
   final AuthService _authService = AuthService();
   final List<String> sections = ['공지사항', '회사소식', '디지털에듀', '사우소식·자유게시판'];
   Map<String, List<Post>> sectionPosts = {};
@@ -81,12 +84,20 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
   }
 
   void _logout() async {
-    await _authService.logout();
-    if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-        (route) => false,
-      );
+    print('NewHomeScreen._logout: Starting logout process');
+    try {
+      await _authService.logout();
+      print('NewHomeScreen._logout: AuthService logout completed');
+    } catch (e) {
+      print('NewHomeScreen._logout: AuthService logout error: $e');
+    } finally {
+      print('NewHomeScreen._logout: Navigating to login screen');
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
     }
   }
 
@@ -142,73 +153,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
     }
   }
   
-  void _testApiCall() async {
-    try {
-      final allSectionPosts = await _postService.getAllSectionPosts();
-      
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('API 결과'),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 400,
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ...allSectionPosts.entries.map((entry) => 
-                      ExpansionTile(
-                        title: Text('${entry.key} (${entry.value.length}개)'),
-                        children: entry.value.map((post) => 
-                          ListTile(
-                            title: Text(
-                              post.title,
-                              style: const TextStyle(fontSize: 12),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: Text(
-                              '작성자: ${post.author}\nctid: ${post.ctid}, docNumber: ${post.docNumber}\n조회수: ${post.viewCount}, 댓글: ${post.commentCount}',
-                              style: const TextStyle(fontSize: 10),
-                            ),
-                            dense: true,
-                          )
-                        ).toList(),
-                      )
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('닫기'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('API 오류'),
-            content: Text('오류: $e'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('닫기'),
-              ),
-            ],
-          ),
-        );
-      }
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -399,16 +344,8 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
                                     size: 16,
                                     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                                   ),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => PostDetailScreen(
-                                          postId: post.id,
-                                          section: section,
-                                        ),
-                                      ),
-                                    );
+                                  onTap: () async {
+                                    await _navigateToPostDetail(post, section);
                                   },
                                 ),
                               );
@@ -437,29 +374,158 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
             onPressed: _testPushNotification,
             child: const Icon(Icons.notifications),
           ),
-          const SizedBox(height: 8),
-          FloatingActionButton(
-            heroTag: "test_api",
-            mini: true,
-            onPressed: _testApiCall,
-            backgroundColor: Colors.green,
-            child: const Icon(Icons.api),
-          ),
         ],
       ) : null,
     );
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
+  Future<void> _navigateToPostDetail(Post homePost, String section) async {
+    print('=== NewHomeScreen._navigateToPostDetail START ===');
+    print('클릭한 게시글: ${homePost.title}');
+    print('섹션: $section');
+    print('게시글 CTID: ${homePost.ctid}');
     
-    if (diff.inDays > 0) {
-      return '${diff.inDays}일 전';
-    } else if (diff.inHours > 0) {
-      return '${diff.inHours}시간 전';
-    } else {
-      return '${diff.inMinutes}분 전';
+    // 로딩 다이얼로그 표시
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+    
+    try {
+      // 사우소식·자유게시판 섹션의 경우 CTID로 정확한 섹션 결정
+      String targetSection = section;
+      if (section == '사우소식·자유게시판') {
+        targetSection = _getSectionByCtid(homePost.ctid);
+        print('사우소식·자유게시판 섹션 매핑: CTID ${homePost.ctid} -> $targetSection');
+      }
+      
+      // 해당 섹션의 상세 게시글 목록 가져오기
+      print('섹션별 API 호출 시작: $targetSection');
+      final sectionPostItems = await _postListApiService.getSectionPosts(targetSection);
+      final sectionPosts = sectionPostItems.map((item) => item.toPost(targetSection)).toList();
+      print('섹션별 API 결과: ${sectionPosts.length}개 게시글');
+      
+      if (sectionPosts.isEmpty) {
+        print('⚠️ 섹션별 API가 빈 결과를 반환했습니다!');
+        print('⚠️ 가능한 원인:');
+        print('   1. 로그인 세션 만료');
+        print('   2. 해당 섹션에 게시글이 없음');
+        print('   3. API 엔드포인트 오류');
+      } else {
+        print('✅ 섹션별 API 성공: ${sectionPosts.length}개 게시글 받음');
+        for (int i = 0; i < sectionPosts.length && i < 3; i++) {
+          print('   [$i] ${sectionPosts[i].title}');
+        }
+      }
+      
+      // 제목으로 매칭되는 게시글 찾기 (docSubject가 title로 매핑됨)
+      final homePostCleanTitle = _cleanTitle(homePost.title);
+      print('홈 게시글 원본 제목: "${homePost.title}"');
+      print('홈 게시글 정제된 제목: "$homePostCleanTitle"');
+      
+      Post? matchedPost;
+      for (int i = 0; i < sectionPosts.length; i++) {
+        final sectionPost = sectionPosts[i];
+        final sectionPostCleanTitle = _cleanTitle(sectionPost.title);
+        
+        print('[$i] 원본 제목 (docSubject): "${sectionPost.title}"');
+        print('[$i] 정제된 제목: "$sectionPostCleanTitle"');
+        print('[$i] 비교 결과: ${homePostCleanTitle == sectionPostCleanTitle ? "매칭 성공!" : "매칭 실패"}');
+        
+        if (homePostCleanTitle == sectionPostCleanTitle) {
+          matchedPost = sectionPost;
+          print('✅ 최종 매칭 성공! 인덱스: $i');
+          print('✅ 매칭된 게시글 내용 길이: ${sectionPost.content.length}');
+          break;
+        }
+      }
+      
+      if (matchedPost == null) {
+        print('❌ 매칭되는 게시글을 찾지 못함');
+        print('❌ 총 ${sectionPosts.length}개 게시글 중 매칭 실패');
+      }
+      
+      // 로딩 다이얼로그 닫기
+      if (mounted) {
+        Navigator.pop(context);
+      }
+      
+      if (matchedPost != null) {
+        print('상세 데이터로 이동: content length = ${matchedPost.content.length}');
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PostDetailScreen(
+                post: matchedPost!,
+              ),
+            ),
+          );
+        }
+      } else {
+        print('매칭되는 게시글을 찾지 못함, 기존 데이터로 이동');
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PostDetailScreen(
+                post: homePost,
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('섹션별 API 호출 실패: $e');
+      // 로딩 다이얼로그 닫기
+      if (mounted) {
+        Navigator.pop(context);
+      }
+      // 기존 데이터로 이동
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PostDetailScreen(
+              post: homePost,
+            ),
+          ),
+        );
+      }
     }
+    
+    print('=== NewHomeScreen._navigateToPostDetail END ===');
+  }
+
+  String _getSectionByCtid(int ctid) {
+    switch (ctid) {
+      case 321:
+        return '공지사항';
+      case 172:
+        return '회사소식';
+      case 164:
+        return '사우소식';
+      case 20:
+        return '자유게시판';
+      case 313:
+        return '디지털에듀';
+      default:
+        return '기타';
+    }
+  }
+
+  String _cleanTitle(String title) {
+    // 1. 대소문자를 대문자로 변환
+    // 2. 모든 공백 문자 제거 (일반 공백, 탭, 줄바꿈 등)
+    return title
+        .toUpperCase()
+        .replaceAll(RegExp(r'\s+'), ''); // 모든 공백 제거
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }

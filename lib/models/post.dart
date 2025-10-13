@@ -65,7 +65,7 @@ class Post {
     return Post(
       id: json['docNumber'].toString(),
       title: json['docSubject'] ?? '',
-      content: json['docText'] ?? '',
+      content: json['docText'] ?? json['content'] ?? '',
       author: json['userName'] ?? '',
       createdAt: DateTime.parse(json['docRegdate'] + ' 00:00:00'),
       viewCount: json['docRefCnt'] ?? 0,

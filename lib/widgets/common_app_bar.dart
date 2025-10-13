@@ -70,14 +70,17 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
             TextButton(
               onPressed: () async {
-                Navigator.of(context).pop();
+                final navigator = Navigator.of(context);
+                navigator.pop(); // 다이얼로그 닫기
+                
                 try {
                   await AuthService().logout();
+                  print('CommonAppBar: AuthService logout completed');
                 } catch (e) {
-                  print('로그아웃 API 호출 실패: $e');
-                }
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
+                  print('CommonAppBar: AuthService logout error: $e');
+                } finally {
+                  // 에러 여부와 관계없이 로그인 화면으로 이동
+                  navigator.pushAndRemoveUntil(
                     MaterialPageRoute(builder: (context) => const LoginScreen()),
                     (route) => false,
                   );
