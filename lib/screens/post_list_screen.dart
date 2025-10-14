@@ -163,6 +163,7 @@ class _PostListScreenState extends State<PostListScreen> {
       final docNumber = baseNumber - index;
       final date = baseDate.subtract(Duration(days: index));
       final formattedDate = '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
+      final hasFiles = (index % 3 == 0); // 3개 중 1개는 첨부파일 있음
       
       return PostListItem(
         rownumber: ((page - 1) * count) + index + 1,
@@ -175,6 +176,7 @@ class _PostListScreenState extends State<PostListScreen> {
         userName: ['관리자', '교육팀', '개발팀', '기획팀'][index % 4],
         replayCt: index % 10,
         docText: 'Mock 게시글 내용입니다. 페이지 $page의 $index번째 게시글입니다.',
+        fileCnt: hasFiles ? (index % 3 + 1) : 0, // 첨부파일 개수 1-3개
       );
     });
   }
@@ -489,6 +491,35 @@ class _PostListScreenState extends State<PostListScreen> {
                                               ],
                                             ),
                                           ),
+                                          if (post.hasAttachment) ...[
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.attach_file,
+                                                    size: 12,
+                                                    color: Theme.of(context).colorScheme.secondary,
+                                                  ),
+                                                  const SizedBox(width: 2),
+                                                  Text(
+                                                    '${post.fileCnt}',
+                                                    style: TextStyle(
+                                                      color: Theme.of(context).colorScheme.secondary,
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
                                         ],
                                       ),
                                     ],

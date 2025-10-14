@@ -2,10 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/post.dart';
 import '../models/comment.dart';
+import '../models/attachment.dart';
 import '../services/post_service.dart';
 import '../services/auth_service.dart';
 import '../services/file_service.dart';
 import '../services/comment_service.dart';
+import '../services/attachment_service.dart';
 import '../widgets/common_app_bar.dart';
 import '../widgets/html_content_widget.dart';
 
@@ -25,15 +27,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   final PostService _postService = PostService();
   final AuthService _authService = AuthService();
   final CommentService _commentService = CommentService();
+  final AttachmentService _attachmentService = AttachmentService();
   final TextEditingController _commentController = TextEditingController();
   List<Comment> comments = [];
+  List<Attachment> attachments = [];
   bool isLoading = true;
+  bool isLoadingAttachments = false;
 
   @override
   void initState() {
     super.initState();
     _logPostData();
     _loadComments();
+    _loadAttachments();
   }
   
   void _logPostData() {
@@ -88,6 +94,24 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     }
     
     print('PostDetailScreen._loadComments: Comments loaded and UI updated');
+  }
+
+  Future<void> _loadAttachments() async {
+    if (widget.post.hasAttachment) {
+      setState(() => isLoadingAttachments = true);
+      
+      final loadedAttachments = await _attachmentService.getAttachments(
+        widget.post.bbsId, 
+        widget.post.docNumber
+      );
+      
+      if (mounted) {
+        setState(() {
+          attachments = loadedAttachments;
+          isLoadingAttachments = false;
+        });
+      }
+    }
   }
 
   void _addComment() async {
@@ -196,6 +220,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             child: RefreshIndicator(
               onRefresh: () async {
                 await _loadComments();
+                await _loadAttachments();
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -369,20 +394,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             ),
                           ),
                           // 첨부파일 섹션
-                          if (widget.post.hasAttachment && widget.post.attachments.isEmpty) ...{
-                            const SizedBox(height: 16),
-                            Divider(
-                              height: 1,
-                              thickness: 1,
-                              color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.all(20),
-                              child: Center(
-                                child: Text('첨부파일 로딩 중...'),
-                              ),
-                            ),
-                          } else if (widget.post.attachments.isNotEmpty) ...{
+                          if (widget.post.hasAttachment || widget.post.fileCnt > 0) ...{
                             const SizedBox(height: 16),
                             Divider(
                               height: 1,
@@ -399,55 +411,92 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       Icon(
                                         Icons.attach_file,
                                         size: 18,
-                                        color: Theme.of(context).colorScheme.primary,
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        '첨부파일 (${widget.post.attachments.length}개)',
+                                        isLoadingAttachments 
+                                          ? '첨부파일 로딩 중...' 
+                                          : attachments.isNotEmpty 
+                                            ? '첨부파일 (${attachments.length}개)'
+                                            : '첨부파일 (${widget.post.fileCnt}개)',
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
-                                          color: Theme.of(context).colorScheme.primary,
+                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                         ),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 12),
-                                  ...widget.post.attachments.map((attachment) => Container(
-                                    margin: const EdgeInsets.only(bottom: 8),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-                                      ),
-                                    ),
-                                    child: ListTile(
-                                      leading: Icon(
-                                        FileService.getFileIcon(attachment.fileType),
-                                        color: Theme.of(context).colorScheme.primary,
-                                      ),
-                                      title: Text(
-                                        attachment.fileName,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 14,
+                                  if (isLoadingAttachments)
+                                    const Center(child: CircularProgressIndicator())
+                                  else if (attachments.isEmpty && widget.post.fileCnt > 0)
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
                                         ),
                                       ),
-                                      subtitle: Text(
-                                        '${attachment.fileType.toUpperCase()} · ${attachment.formattedFileSize}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.info_outline,
+                                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              '첨부파일이 있지만 로드에 실패했습니다. 새로고침을 시도해주세요.',
+                                              style: TextStyle(
+                                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  else
+                                    ...attachments.map((attachment) => Container(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.03),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.15),
                                         ),
                                       ),
-                                      trailing: Icon(
-                                        Icons.download,
-                                        color: Theme.of(context).colorScheme.primary,
+                                      child: ListTile(
+                                        leading: Icon(
+                                          FileService.getFileIcon(attachment.fileType),
+                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                        ),
+                                        title: Text(
+                                          attachment.fileName,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        subtitle: Text(
+                                          '${attachment.fileType.toUpperCase()} · ${attachment.formattedFileSize}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                          ),
+                                        ),
+                                        trailing: Icon(
+                                          Icons.download,
+                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                        ),
+                                        onTap: () => FileService.downloadAndOpenFile(context, attachment),
                                       ),
-                                      onTap: () => FileService.downloadAndOpenFile(context, attachment),
-                                    ),
-                                  )),
+                                    )),
                                 ],
                               ),
                             ),

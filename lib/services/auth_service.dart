@@ -215,4 +215,9 @@ class AuthService {
       return false;
     }
   }
+  
+  // 쿠키 가져오기
+  Future<String> getCookies() async {
+    return ApiService.getCookies();
+  }
 }

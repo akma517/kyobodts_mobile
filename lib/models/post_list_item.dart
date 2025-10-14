@@ -13,6 +13,7 @@ class PostListItem {
   final String userName;
   final int replayCt;
   final String docText;
+  final int fileCnt;
 
   PostListItem({
     required this.rownumber,
@@ -27,6 +28,7 @@ class PostListItem {
     required this.userName,
     required this.replayCt,
     required this.docText,
+    this.fileCnt = 0,
   });
 
   factory PostListItem.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,7 @@ class PostListItem {
       userName: json['userName']?.toString() ?? '',
       replayCt: subjectAndReply['replyCount']!,
       docText: json['docText']?.toString() ?? '',
+      fileCnt: int.tryParse(json['fileCnt']?.toString() ?? '0') ?? 0,
     );
   }
   
@@ -125,6 +128,9 @@ class PostListItem {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
   
+  // 첨부파일 존재 여부
+  bool get hasAttachment => fileCnt > 0;
+  
   // PostListItem을 Post 객체로 변환
   Post toPost(String section) {
     return Post(
@@ -135,12 +141,12 @@ class PostListItem {
       createdAt: createdAt,
       viewCount: docRefCnt,
       commentCount: replayCt,
-      hasAttachment: false, // 목록에서는 첨부파일 정보가 없음
+      hasAttachment: hasAttachment,
       section: section,
       attachments: [],
       ctid: ctid,
       docNumber: docNumber,
-      fileCnt: 0,
+      fileCnt: fileCnt,
       bbsId: bbsId,
     );
   }

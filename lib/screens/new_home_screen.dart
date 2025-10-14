@@ -336,6 +336,14 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
                                             fontSize: 12,
                                           ),
                                         ),
+                                        if (post.hasAttachment) ...[
+                                          const SizedBox(width: 8),
+                                          Icon(
+                                            Icons.attach_file,
+                                            size: 14,
+                                            color: Theme.of(context).colorScheme.secondary,
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),

@@ -45,6 +45,11 @@ class ApiService {
       print('ApiService: Current cookies: $_cookies');
     }
   }
+  
+  // 쿠키 가져오기
+  static String getCookies() {
+    return _cookies.entries.map((e) => '${e.key}=${e.value}').join('; ');
+  }
 
   // 중앙화된 HTTP 요청 처리 (HTML 응답 자동 감지 및 재시도)
   static Future<http.Response> makeRequest(String url, {Map<String, String>? headers}) async {

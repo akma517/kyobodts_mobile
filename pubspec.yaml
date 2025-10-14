@@ -2,7 +2,7 @@ name: kyobodts_mobile
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: '>=3.6.0 <4.0.0'
@@ -23,6 +23,7 @@ dependencies:
   provider: ^6.1.2
   http: ^1.2.2
   flutter_widget_from_html: ^0.15.2
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:

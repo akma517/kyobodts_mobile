@@ -107,6 +107,12 @@ class SessionManager {
     );
   }
 
+  // 쿠키 가져오기
+  static Future<String> getCookies() async {
+    final instance = SessionManager();
+    return await instance._authService.getCookies();
+  }
+
   // 전역 로그아웃 처리 (어디서든 호출 가능)
   static Future<void> globalLogout() async {
     final instance = SessionManager();

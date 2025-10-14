@@ -104,14 +104,16 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.1),
                 Icon(
                   Icons.business,
                   size: 80,
@@ -183,6 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Theme.of(context).colorScheme.outline,
                   ),
                 ),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.1),
               ],
             ),
           ),

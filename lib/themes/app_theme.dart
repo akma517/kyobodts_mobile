@@ -40,8 +40,21 @@ class AppTheme {
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.blue[900]!,
             brightness: Brightness.dark,
+          ).copyWith(
+            surface: const Color(0xFF1E1E1E),
+            surfaceContainerHighest: const Color(0xFF2A2A2A),
+            outline: const Color(0xFF606060),
+            outlineVariant: const Color(0xFF505050),
           ),
           useMaterial3: true,
+          cardTheme: const CardThemeData(
+            color: Color(0xFF2A2A2A),
+            elevation: 2,
+          ),
+          dividerTheme: const DividerThemeData(
+            color: Color(0xFF505050),
+            thickness: 0.5,
+          ),
         );
       case AppThemeType.light:
         return ThemeData(
