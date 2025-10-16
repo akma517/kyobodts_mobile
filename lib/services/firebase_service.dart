@@ -17,12 +17,20 @@ class FirebaseService {
   
   Function(Map<String, dynamic>)? onMessageReceived;
   bool _isInitialized = false;
+  bool _isInitializing = false;
 
   Future<void> initialize() async {
     if (_isInitialized) {
       print('🔥 Firebase 이미 초기화됨');
       return;
     }
+    
+    if (_isInitializing) {
+      print('🔥 Firebase 초기화 진행 중...');
+      return;
+    }
+    
+    _isInitializing = true;
     
     try {
       print('🔥 Firebase 초기화 시작...');
@@ -72,6 +80,8 @@ class FirebaseService {
     } catch (e) {
       print('😨 Firebase 초기화 오류: $e');
       rethrow;
+    } finally {
+      _isInitializing = false;
     }
   }
 
@@ -192,6 +202,9 @@ class FirebaseService {
   void _processMessageData(Map<String, dynamic> data) {
     onMessageReceived?.call(data);
   }
+  
+  bool get isInitialized => _isInitialized;
+  bool get isInitializing => _isInitializing;
 }
 
 

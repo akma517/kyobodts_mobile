@@ -62,7 +62,12 @@ class ApiService {
       ...?headers,
     };
     
-    final response = await httpClient.get(Uri.parse(url), headers: defaultHeaders);
+    final response = await httpClient.get(Uri.parse(url), headers: defaultHeaders).timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {
+        throw Exception('Request timeout after 30 seconds');
+      },
+    );
     
     print('ApiService.makeRequest: Response status ${response.statusCode}');
     print('ApiService.makeRequest: Content-Type: ${response.headers['content-type']}');

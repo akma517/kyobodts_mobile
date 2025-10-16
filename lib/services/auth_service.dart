@@ -77,10 +77,20 @@ class AuthService {
       if (response.statusCode == 200 || response.statusCode == 302) {
         print('AuthService._loginWithAPI: HTTP status OK, checking response content');
         
+        // loginfailed.do 텍스트가 있으면 로그인 실패 (헤더와 본문 모두 검사)
+        final headersString = response.headers.toString();
+        final hasLoginFailedInBody = response.body.contains('loginfailed.do');
+        final hasLoginFailedInHeaders = headersString.contains('loginfailed.do');
+        final hasLoginFailed = hasLoginFailedInBody || hasLoginFailedInHeaders;
+        
+        print('AuthService._loginWithAPI: Contains loginfailed.do in body: $hasLoginFailedInBody');
+        print('AuthService._loginWithAPI: Contains loginfailed.do in headers: $hasLoginFailedInHeaders');
+        print('AuthService._loginWithAPI: Overall loginfailed.do check: $hasLoginFailed');
+        
         final hasError = response.body.contains('error') || response.body.contains('fail');
         print('AuthService._loginWithAPI: Contains error/fail: $hasError');
         
-        if (!hasError) {
+        if (!hasLoginFailed && !hasError) {
           _currentUser = User(
             id: id,
             name: id,

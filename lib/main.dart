@@ -12,6 +12,9 @@ void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   
+  // 앱 시작 즉시 스플래시 제거
+  FlutterNativeSplash.remove();
+  
   runApp(const MyApp());
 }
 
@@ -29,18 +32,17 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     SessionManager.setNavigatorKey(_navigatorKey);
-    _initializeFirebase();
+    _initializeFirebaseInBackground();
   }
 
-  void _initializeFirebase() async {
+  void _initializeFirebaseInBackground() async {
+    // Firebase를 백그라운드에서 초기화
     try {
       await FirebaseService().initialize();
       _setupPushHandling();
+      print('Firebase 백그라운드 초기화 완료');
     } catch (e) {
-      print('Firebase 초기화 실패: $e');
-    } finally {
-      // Firebase 초기화 완료 후 스플래시 제거
-      FlutterNativeSplash.remove();
+      print('Firebase 백그라운드 초기화 실패: $e');
     }
   }
 
