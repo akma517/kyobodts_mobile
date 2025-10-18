@@ -118,4 +118,41 @@ class SessionManager {
     final instance = SessionManager();
     await instance._logoutAndRedirect();
   }
+  
+  // 로그인 상태 확인 (실제 계정만, test 계정 제외)
+  static Future<bool> isRealAccountLoggedIn() async {
+    try {
+      final instance = SessionManager();
+      
+      // 현재 로그인된 사용자 확인
+      final currentUser = instance._authService.currentUser;
+      if (currentUser == null) {
+        return false;
+      }
+      
+      // test 계정이 아닌 실제 계정인지 확인
+      final isRealAccount = currentUser.id != 'test';
+      print('SessionManager.isRealAccountLoggedIn: Current user: ${currentUser.id}, isRealAccount: $isRealAccount');
+      
+      return isRealAccount;
+    } catch (e) {
+      print('SessionManager.isRealAccountLoggedIn: Error checking login status: $e');
+      return false;
+    }
+  }
+  
+  // test 계정 여부 확인 (하위 호환성을 위해 유지)
+  static Future<bool> isTestAccountLoggedIn() async {
+    try {
+      final instance = SessionManager();
+      final currentUser = instance._authService.currentUser;
+      if (currentUser == null) {
+        return false;
+      }
+      return currentUser.id == 'test';
+    } catch (e) {
+      print('SessionManager.isTestAccountLoggedIn: Error checking login status: $e');
+      return false;
+    }
+  }
 }

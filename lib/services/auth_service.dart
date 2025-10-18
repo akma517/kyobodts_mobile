@@ -230,4 +230,21 @@ class AuthService {
   Future<String> getCookies() async {
     return ApiService.getCookies();
   }
+  
+  // 저장된 로그인 정보 가져오기
+  Future<Map<String, String>?> getStoredCredentials() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final id = prefs.getString('login_id');
+      final password = prefs.getString('login_password');
+      
+      if (id != null && password != null) {
+        return {'id': id, 'password': password};
+      }
+      return null;
+    } catch (e) {
+      print('AuthService.getStoredCredentials: Error - $e');
+      return null;
+    }
+  }
 }

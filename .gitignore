@@ -47,3 +47,12 @@ app.*.map.json
 # Firebase config files (add real files for production)
 # /android/app/google-services.json
 # /ios/Runner/GoogleService-Info.plist
+
+# Firebase service account keys - NEVER commit these!
+push_backend/config/service_account_key.json
+**/service_account_key.json
+*.json
+!package.json
+!pubspec.json
+!manifest.json
+!**/Contents.json

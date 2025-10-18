@@ -146,6 +146,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (loginInfo.isAutoLogin && !_autoLoginExecuted.contains(loginKey)) {
         _autoLoginExecuted.add(loginKey);
         WebViewService.executeAutoLogin(_webViewController!, systemType, loginInfo);
+        
+        // 로그인 성공 후 화면 새로고침으로 AppBar 상태 업데이트
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) setState(() {});
+        });
       }
     }
   }

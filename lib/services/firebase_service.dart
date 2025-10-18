@@ -153,11 +153,32 @@ class FirebaseService {
       } else {
         print('🔥 FCM 토큰을 받지 못했습니다.');
       }
+      
+      // 전체 사용자 토픽 구독
+      await _subscribeToTopics();
+      
     } catch (e) {
       print('🔥 FCM 토큰 획득 실패: $e');
       if (e.toString().contains('apns-token-not-set')) {
         print('🔥 APNS 토큰이 설정되지 않았습니다. 실제 디바이스에서 테스트해주세요.');
       }
+    }
+  }
+  
+  Future<void> _subscribeToTopics() async {
+    if (_messaging == null) return;
+    
+    try {
+      // 모든 사용자 토픽 구독
+      await _messaging!.subscribeToTopic('all_users');
+      print('🔥 all_users 토픽 구독 완료');
+      
+      // 추가 토픽들 (필요시)
+      await _messaging!.subscribeToTopic('announcements');
+      print('🔥 announcements 토픽 구독 완료');
+      
+    } catch (e) {
+      print('🔥 토픽 구독 실패: $e');
     }
   }
 
@@ -205,6 +226,67 @@ class FirebaseService {
   
   bool get isInitialized => _isInitialized;
   bool get isInitializing => _isInitializing;
+  
+  /// 푸시 알림 준비 상태 확인 (초기화 + 토큰 준비)
+  Future<bool> isPushNotificationReady() async {
+    if (!_isInitialized) {
+      print('🔥 Firebase 초기화가 완료되지 않음');
+      return false;
+    }
+    
+    final fcmReady = await isFCMTokenReady();
+    final apnsReady = await isAPNSTokenReady();
+    
+    final isReady = fcmReady && apnsReady;
+    print('🔥 푸시 알림 준비 상태: ${isReady ? "준비됨" : "준비 안됨"} (FCM: $fcmReady, APNS: $apnsReady)');
+    return isReady;
+  }
+  
+  Future<void> subscribeToTopic(String topic) async {
+    if (_messaging != null) {
+      await _messaging!.subscribeToTopic(topic);
+      print('🔥 토픽 구독: $topic');
+    }
+  }
+  
+  Future<void> unsubscribeFromTopic(String topic) async {
+    if (_messaging != null) {
+      await _messaging!.unsubscribeFromTopic(topic);
+      print('🔥 토픽 구독 해제: $topic');
+    }
+  }
+  
+  /// APNS 토큰 준비 상태 확인 (iOS만)
+  Future<bool> isAPNSTokenReady() async {
+    if (!Platform.isIOS || _messaging == null) {
+      return true; // Android나 초기화 안된 경우는 true 반환
+    }
+    
+    try {
+      final apnsToken = await _messaging!.getAPNSToken();
+      final isReady = apnsToken != null;
+      print('🔥 APNS 토큰 상태: ${isReady ? "준비됨" : "준비 안됨"} - $apnsToken');
+      return isReady;
+    } catch (e) {
+      print('🔥 APNS 토큰 상태 확인 실패: $e');
+      return false;
+    }
+  }
+  
+  /// FCM 토큰 준비 상태 확인
+  Future<bool> isFCMTokenReady() async {
+    if (_messaging == null) return false;
+    
+    try {
+      final token = await _messaging!.getToken();
+      final isReady = token != null && token.isNotEmpty;
+      print('🔥 FCM 토큰 상태: ${isReady ? "준비됨" : "준비 안됨"}');
+      return isReady;
+    } catch (e) {
+      print('🔥 FCM 토큰 상태 확인 실패: $e');
+      return false;
+    }
+  }
 }
 
 

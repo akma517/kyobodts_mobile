@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
 import 'services/firebase_service.dart';
 import 'services/session_manager.dart';
+import 'services/inapp_notification_service.dart';
 import 'widgets/content_modal.dart';
+import 'widgets/dynamic_content_modal.dart';
 import 'models/push_message.dart';
 import 'themes/theme_provider.dart';
 
@@ -39,6 +41,7 @@ class _MyAppState extends State<MyApp> {
     // Firebase를 백그라운드에서 초기화
     try {
       await FirebaseService().initialize();
+      await InAppNotificationService.initialize();
       _setupPushHandling();
       print('Firebase 백그라운드 초기화 완료');
     } catch (e) {
@@ -50,6 +53,16 @@ class _MyAppState extends State<MyApp> {
     try {
       FirebaseService().onMessageReceived = (data) {
         final message = PushMessage.fromMap(data);
+        
+        // 인앱 알림으로도 저장 (권한 차단 사용자 대응)
+        InAppNotificationService.addNotification(
+          title: message.title,
+          body: message.body,
+          contentUrl: message.contentUrl,
+          contentType: message.contentTypeEnum,
+          customData: data,
+        );
+        
         if (message.hasContent) {
           _showContentModal(message);
         }
@@ -62,6 +75,21 @@ class _MyAppState extends State<MyApp> {
   void _showContentModal(PushMessage message) {
     final context = _navigatorKey.currentContext;
     if (context != null) {
+      // 동적 콘텐츠 처리
+      if (message.contentTypeEnum == 'dynamic_html') {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => DynamicContentModal(
+              apiUrl: message.contentUrl!,
+              title: message.title,
+            ),
+            fullscreenDialog: true,
+          ),
+        );
+        return;
+      }
+      
+      // 기존 정적 콘텐츠 처리
       ContentType contentType;
       switch (message.contentTypeEnum) {
         case 'pdf':

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../themes/theme_provider.dart';
 import '../services/auth_service.dart';
+import '../services/session_manager.dart';
+import '../services/notification_subscription_service.dart';
 import '../screens/login_screen.dart';
+import 'notification_toggle_switch.dart';
 
-class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
+class CommonAppBar extends StatefulWidget implements PreferredSizeWidget {
   final String title;
   final bool showBackButton;
 
@@ -15,14 +18,39 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
+  State<CommonAppBar> createState() => _CommonAppBarState();
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}
+
+class _CommonAppBarState extends State<CommonAppBar> {
+  bool _isRealAccountLoggedIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    final isLoggedIn = await SessionManager.isRealAccountLoggedIn();
+    if (mounted) {
+      setState(() {
+        _isRealAccountLoggedIn = isLoggedIn;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AppBar(
       elevation: 0,
       backgroundColor: Colors.transparent,
       foregroundColor: Theme.of(context).colorScheme.onSurface,
-      automaticallyImplyLeading: showBackButton,
+      automaticallyImplyLeading: widget.showBackButton,
       title: Text(
-        title,
+        widget.title,
         style: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -44,6 +72,8 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
             );
           },
         ),
+        // 실제 계정 로그인 사용자에게만 알림 토글 표시 (test 계정 제외)
+        if (_isRealAccountLoggedIn) const NotificationToggleSwitch(),
         IconButton(
           icon: Icon(
             Icons.logout,
@@ -76,8 +106,19 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
                 try {
                   await AuthService().logout();
                   print('CommonAppBar: AuthService logout completed');
+                  
+                  // 알림 구독 상태 초기화
+                  await NotificationSubscriptionService.resetAllSubscriptions();
+                  print('CommonAppBar: Notification subscriptions reset');
+                  
+                  // 로그인 상태 업데이트
+                  if (mounted) {
+                    setState(() {
+                      _isRealAccountLoggedIn = false;
+                    });
+                  }
                 } catch (e) {
-                  print('CommonAppBar: AuthService logout error: $e');
+                  print('CommonAppBar: Logout process error: $e');
                 } finally {
                   // 에러 여부와 관계없이 로그인 화면으로 이동
                   navigator.pushAndRemoveUntil(
@@ -97,6 +138,8 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  // 로그인 성공 후 호출되는 메서드
+  void onLoginSuccess() {
+    _checkLoginStatus();
+  }
 }
