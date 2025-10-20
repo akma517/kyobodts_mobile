@@ -12,9 +12,7 @@ import '../widgets/custom_floating_action_button.dart';
 import '../widgets/popup_webview.dart';
 import '../widgets/content_modal.dart';
 import '../widgets/common_app_bar.dart';
-import '../utils/push_test_helper.dart';
-import '../models/push_message.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
 
 bool isAppLoading = true;
 
@@ -76,31 +74,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (kDebugMode) ...[
-            FloatingActionButton(
-              heroTag: "show_token",
-              mini: true,
-              onPressed: _showFCMToken,
-              backgroundColor: Colors.blue,
-              child: const Icon(Icons.token),
-            ),
-            const SizedBox(height: 8),
-            FloatingActionButton(
-              heroTag: "test_push",
-              mini: true,
-              onPressed: _testPushNotification,
-              child: const Icon(Icons.notifications),
-            ),
-          ],
-          const SizedBox(height: 8),
-          CustomFloatingActionButton(
-            webViewController: _webViewController,
-            isLoginPage: _isLoginPage,
-          ),
-        ],
+      floatingActionButton: CustomFloatingActionButton(
+        webViewController: _webViewController,
+        isLoginPage: _isLoginPage,
       ),
       bottomNavigationBar: CustomBottomNavigation(
         webViewController: _webViewController,
@@ -187,50 +163,5 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showFCMToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('fcm_token') ?? '토큰이 없습니다';
-    
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('FCM 토큰'),
-          content: SelectableText(token),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('닫기'),
-            ),
-          ],
-        ),
-      );
-    }
-  }
 
-  void _testPushNotification() async {
-    final data = PushTestHelper.getSamplePushData();
-    final message = PushMessage.fromMap(data);
-    
-    if (message.hasContent) {
-      ContentType contentType;
-      switch (message.contentTypeEnum) {
-        case 'pdf':
-          contentType = ContentType.pdf;
-          break;
-        case 'asset':
-          contentType = ContentType.asset;
-          break;
-        default:
-          contentType = ContentType.html;
-      }
-
-      ContentModalHelper.showContentModal(
-        context,
-        contentUrl: message.contentUrl!,
-        title: message.title,
-        contentType: contentType,
-      );
-    }
-  }
 }

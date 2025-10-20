@@ -52,8 +52,8 @@ class _NotificationToggleSwitchState extends State<NotificationToggleSwitch> {
 
     final String title = _isSubscribed! ? '구독 취소' : '구독 신청';
     final String message = _isSubscribed! 
-        ? '소식지 구독(푸시 메세지 알림)을 취소하시겠습니까?'
-        : '소식지 구독(푸시 메세지 알림)을 사용하시겠습니까?';
+        ? '푸시 메세지 알림을 취소하시겠습니까?'
+        : '푸시 메세지 알림을 사용하시겠습니까?';
     
     print('💬 NotificationToggleSwitch._showConfirmDialog: Showing dialog - title: $title');
     
@@ -120,21 +120,9 @@ class _NotificationToggleSwitchState extends State<NotificationToggleSwitch> {
   void _showFeedback(bool isSubscribed) {
     if (!mounted) return;
 
-    // 플랫폼 및 환경 감지
-    final platform = Theme.of(context).platform;
-    String environmentNote = '';
-    
-    if (platform == TargetPlatform.iOS) {
-      // iOS에서는 시뮬레이터 여부를 알리기 어려우므로 일반적인 안내
-      environmentNote = ' (실제 기기에서만 푸시 알림 수신 가능)';
-    } else if (platform == TargetPlatform.android) {
-      // Android는 에뮬레이터에서도 대부분 정상 동작
-      environmentNote = '';
-    }
-    
     final feedbackMessage = isSubscribed 
-        ? '알림이 활성화되었습니다$environmentNote'
-        : '알림이 비활성화되었습니다$environmentNote';
+        ? '알림이 활성화되었습니다'
+        : '알림이 비활성화되었습니다';
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

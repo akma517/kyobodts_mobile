@@ -33,32 +33,11 @@ class FirebaseService {
     _isInitializing = true;
     
     try {
-      print('🔥 Firebase 초기화 시작...');
+      print('🔥 Firebase 서비스 초기화 시작...');
+      print('🔥 플랫폼: ${defaultTargetPlatform.toString()}');
       
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        await Firebase.initializeApp(
-          options: const FirebaseOptions(
-            apiKey: 'AIzaSyAJHDPlvaKoR2FD_t6wyx_mPJYhyFh0guM',
-            appId: '1:860019738433:android:804dc9750e2778a198c3c0',
-            messagingSenderId: '860019738433',
-            projectId: 'kyobodts-mobile',
-          ),
-        );
-      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-        await Firebase.initializeApp(
-          options: const FirebaseOptions(
-            apiKey: 'AIzaSyD-Y48wGPTCXBqQQ21jt-0md_g1qtHBtb0',
-            appId: '1:860019738433:ios:29823a1d5f86f09398c3c0',
-            messagingSenderId: '860019738433',
-            projectId: 'kyobodts-mobile',
-            iosBundleId: 'com.kyobodts.mobile',
-          ),
-        );
-      } else {
-        await Firebase.initializeApp();
-      }
-      
-      print('🔥 Firebase 초기화 완료');
+      // Firebase는 main()에서 이미 초기화됨
+      print('🔥 Firebase 기본 초기화 확인 완료');
       
       // Firebase 초기화 후 messaging 인스턴스 생성
       _messaging = FirebaseMessaging.instance;
@@ -77,8 +56,19 @@ class FirebaseService {
       print('🔥 Firebase 전체 초기화 완료!');
       
       _isInitialized = true;
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('😨 Firebase 초기화 오류: $e');
+      print('😨 스택 트레이스: $stackTrace');
+      
+      // 오류 유형별 상세 로깅
+      if (e.toString().contains('GoogleService-Info.plist')) {
+        print('😨 GoogleService-Info.plist 파일 문제 감지');
+      } else if (e.toString().contains('duplicate')) {
+        print('😨 중복 초기화 감지');
+      } else if (e.toString().contains('network')) {
+        print('😨 네트워크 연결 문제 감지');
+      }
+      
       rethrow;
     } finally {
       _isInitializing = false;
@@ -169,16 +159,12 @@ class FirebaseService {
     if (_messaging == null) return;
     
     try {
-      // 모든 사용자 토픽 구독
-      await _messaging!.subscribeToTopic('all_users');
-      print('🔥 all_users 토픽 구독 완료');
-      
+      // all_users 토픽은 로그인 시점에서 조건부 구독으로 변경
       // 추가 토픽들 (필요시)
       await _messaging!.subscribeToTopic('announcements');
-      print('🔥 announcements 토픽 구독 완료');
       
     } catch (e) {
-      print('🔥 토픽 구독 실패: $e');
+      // 토픽 구독 실패 시 무시
     }
   }
 

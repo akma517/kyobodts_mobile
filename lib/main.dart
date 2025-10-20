@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'screens/login_screen.dart';
 import 'services/firebase_service.dart';
 import 'services/session_manager.dart';
@@ -13,6 +15,35 @@ import 'themes/theme_provider.dart';
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  
+  // Firebase 먼저 초기화
+  try {
+    if (Platform.isIOS) {
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: 'AIzaSyD-Y48wGPTCXBqQQ21jt-0md_g1qtHBtb0',
+          appId: '1:860019738433:ios:29823a1d5f86f09398c3c0',
+          messagingSenderId: '860019738433',
+          projectId: 'kyobodts-mobile',
+          iosBundleId: 'com.kyobodts.mobile',
+        ),
+      );
+    } else if (Platform.isAndroid) {
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: 'AIzaSyAJHDPlvaKoR2FD_t6wyx_mPJYhyFh0guM',
+          appId: '1:860019738433:android:804dc9750e2778a198c3c0',
+          messagingSenderId: '860019738433',
+          projectId: 'kyobodts-mobile',
+        ),
+      );
+    } else {
+      await Firebase.initializeApp();
+    }
+    print('🔥 Firebase main() 초기화 완료');
+  } catch (e) {
+    print('🔥 Firebase main() 초기화 실패: $e');
+  }
   
   // 앱 시작 즉시 스플래시 제거
   FlutterNativeSplash.remove();
@@ -38,14 +69,25 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _initializeFirebaseInBackground() async {
-    // Firebase를 백그라운드에서 초기화
+    // Firebase 초기화 완료 대기
+    await Future.delayed(const Duration(milliseconds: 500));
+    
     try {
+      print('🔥 Firebase 서비스 초기화 시작...');
       await FirebaseService().initialize();
+      print('🔥 Firebase 서비스 초기화 완료');
+      
       await InAppNotificationService.initialize();
+      print('🔔 InApp 알림 서비스 초기화 완료');
+      
       _setupPushHandling();
-      print('Firebase 백그라운드 초기화 완료');
+      print('📱 푸시 핸들링 설정 완료');
+      
+      print('✅ 모든 Firebase 서비스 초기화 완료');
     } catch (e) {
-      print('Firebase 백그라운드 초기화 실패: $e');
+      print('❌ Firebase 서비스 초기화 실패: $e');
+      print('❌ 스택 트레이스: ${e.toString()}');
+      // Firebase 초기화 실패해도 앱은 계속 실행
     }
   }
 

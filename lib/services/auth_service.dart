@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/user.dart';
 import '../constants/app_constants.dart';
 import 'api_service.dart';
+import 'firebase_topic_manager.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -102,6 +103,9 @@ class AuthService {
             await _saveLoginInfo(id, password);
           }
           
+          // 실제 계정 로그인 성공 시 all_users 토픽 조건부 구독
+          await FirebaseTopicManager.subscribeToAllUsersIfEligible(id);
+          
           print('AuthService._loginWithAPI: Login SUCCESS - User created: ${_currentUser?.id}');
           return true;
         } else {
@@ -129,7 +133,14 @@ class AuthService {
       
       if (id != null && password != null) {
         print('AuthService.autoLogin: Attempting login with stored credentials');
-        return await login(id, password, false);
+        final success = await login(id, password, false);
+        
+        // 자동 로그인 성공 시도 조건부 구독 시도 (실제 계정만)
+        if (success && id != 'test') {
+          await FirebaseTopicManager.subscribeToAllUsersIfEligible(id);
+        }
+        
+        return success;
       }
       
       print('AuthService.autoLogin: No stored credentials found');
@@ -153,9 +164,11 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    final currentUserId = _currentUser?.id;
+    
     try {
       // test 계정이 아닌 경우 로그아웃 API 호출
-      if (_currentUser?.id != 'test') {
+      if (currentUserId != 'test') {
         await _logoutWithAPI();
       }
     } catch (e) {
@@ -167,6 +180,11 @@ class AuthService {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('login_id');
         await prefs.remove('login_password');
+        
+        // 최초 로그인 상태 초기화 (실제 계정만)
+        if (currentUserId != null && currentUserId != 'test') {
+          await prefs.remove('first_login_completed_$currentUserId');
+        }
       } catch (e) {
         print('AuthService.logout: SharedPreferences error: $e');
       }

@@ -136,12 +136,12 @@ Content-Type: application/json
 curl -X GET http://localhost:5000/health
 
 # 푸시 발송
-curl -X POST http://localhost:5000/push/send \
+curl -X POST http://54.206.1.146/:5000/push/send \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "테스트 알림",
-    "body": "테스트 메시지입니다",
-    "target_type": "token",
-    "target_value": "YOUR_FCM_TOKEN"
+    "title": "전체 공지",
+    "body": "모든 사용자에게 알림",
+    "target_type": "topic",
+    "target_value": "all_users"
   }'
 ```
