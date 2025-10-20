@@ -76,6 +76,18 @@ class FirebaseService {
   }
 
   Future<void> _setupLocalNotifications() async {
+    // Android 알림 채널 생성
+    const androidChannel = AndroidNotificationChannel(
+      'kyobodts_channel',
+      '교보DTS 알림',
+      description: '교보DTS 푸시 알림',
+      importance: Importance.high,
+    );
+    
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(androidChannel);
+    
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -88,19 +100,27 @@ class FirebaseService {
       iOS: iosSettings,
     );
 
-    await _localNotifications.initialize(
+    final initialized = await _localNotifications.initialize(
       settings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
+    
+    print('🔔 로컬 알림 초기화 결과: $initialized');
+    
+    // 로컬 알림 권한 확인
+    await _checkLocalNotificationPermissions();
   }
 
   Future<void> _requestPermissions() async {
     if (_messaging == null) return;
-    await _messaging!.requestPermission(
+    
+    final settings = await _messaging!.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
+    
+    print('🔔 FCM 권한 상태: ${settings.authorizationStatus}');
   }
 
   Future<void> _setupMessageHandlers() async {
@@ -170,6 +190,7 @@ class FirebaseService {
 
   void _handleForegroundMessage(RemoteMessage message) {
     print('📱 포그라운드 메시지 수신: ${message.notification?.title}');
+    // 포그라운드에서도 알림 표시
     _showLocalNotification(message);
     _processMessageData(message.data);
   }
@@ -179,24 +200,45 @@ class FirebaseService {
   }
 
   Future<void> _showLocalNotification(RemoteMessage message) async {
-    const androidDetails = AndroidNotificationDetails(
-      'kyobodts_channel',
-      '교보DTS 알림',
-      channelDescription: '교보DTS 푸시 알림',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
+    try {
+      print('🔔 로컬 알림 표시 시작: ${message.notification?.title}');
+      
+      const androidDetails = AndroidNotificationDetails(
+        'kyobodts_channel',
+        '교보DTS 알림',
+        channelDescription: '교보DTS 푸시 알림',
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        enableVibration: true,
+        playSound: true,
+      );
 
-    const iosDetails = DarwinNotificationDetails();
-    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+      
+      const details = NotificationDetails(
+        android: androidDetails, 
+        iOS: iosDetails,
+      );
 
-    await _localNotifications.show(
-      message.hashCode,
-      message.notification?.title ?? '교보DTS',
-      message.notification?.body ?? '',
-      details,
-      payload: jsonEncode(message.data),
-    );
+      final notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      
+      await _localNotifications.show(
+        notificationId,
+        message.notification?.title ?? '교보DTS',
+        message.notification?.body ?? '',
+        details,
+        payload: jsonEncode(message.data),
+      );
+      
+      print('🔔 로컬 알림 표시 완료: ID $notificationId');
+    } catch (e) {
+      print('❌ 로컬 알림 표시 실패: $e');
+    }
   }
 
   void _onNotificationTapped(NotificationResponse response) {
@@ -271,6 +313,25 @@ class FirebaseService {
     } catch (e) {
       print('🔥 FCM 토큰 상태 확인 실패: $e');
       return false;
+    }
+  }
+  
+  /// 로컬 알림 권한 확인
+  Future<void> _checkLocalNotificationPermissions() async {
+    if (Platform.isAndroid) {
+      final androidImplementation = _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final granted = await androidImplementation?.areNotificationsEnabled() ?? false;
+      print('🔔 Android 로컬 알림 권한: ${granted ? "허용됨" : "거부됨"}');
+    } else if (Platform.isIOS) {
+      final iosImplementation = _localNotifications
+          .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+      final granted = await iosImplementation?.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      ) ?? false;
+      print('🔔 iOS 로컬 알림 권한: ${granted ? "허용됨" : "거부됨"}');
     }
   }
 }
