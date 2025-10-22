@@ -16,6 +16,7 @@ class FirebaseService {
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   
   Function(Map<String, dynamic>)? onMessageReceived;
+  Function(Map<String, dynamic>)? onDynamicContentRequested;
   bool _isInitialized = false;
   bool _isInitializing = false;
 
@@ -249,7 +250,32 @@ class FirebaseService {
   }
 
   void _processMessageData(Map<String, dynamic> data) {
+    // 기존 콜백 호출 (하위 호환성 보장)
     onMessageReceived?.call(data);
+    
+    // 동적 콘텐츠 액션 처리
+    _handleDynamicContentAction(data);
+  }
+  
+  void _handleDynamicContentAction(Map<String, dynamic> data) {
+    try {
+      final action = data['action'];
+      if (action == 'show_dynamic_content') {
+        final contentUrl = data['content_url'];
+        final contentType = data['content_type'];
+        
+        if (contentUrl != null && contentType == 'dynamic_html') {
+          print('🔥 동적 콘텐츠 액션 감지: $contentUrl');
+          // 콜백으로 UI 레이어에 전달
+          onDynamicContentRequested?.call({
+            'content_url': contentUrl,
+            'title': data['title'] ?? '알림',
+          });
+        }
+      }
+    } catch (e) {
+      print('🔥 동적 콘텐츠 처리 오류: $e');
+    }
   }
   
   bool get isInitialized => _isInitialized;

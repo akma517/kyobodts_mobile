@@ -93,6 +93,7 @@ class _MyAppState extends State<MyApp> {
 
   void _setupPushHandling() {
     try {
+      // 기존 메시지 처리 (하위 호환성 보장)
       FirebaseService().onMessageReceived = (data) {
         final message = PushMessage.fromMap(data);
         
@@ -109,6 +110,22 @@ class _MyAppState extends State<MyApp> {
           _showContentModal(message);
         }
       };
+      
+      // 동적 콘텐츠 처리 (새로운 기능)
+      FirebaseService().onDynamicContentRequested = (data) {
+        final context = _navigatorKey.currentContext;
+        if (context != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => DynamicContentModal(
+                contentUrl: data['content_url'],
+                title: data['title'],
+              ),
+              fullscreenDialog: true,
+            ),
+          );
+        }
+      };
     } catch (e) {
       print('Firebase 푸시 핸들링 설정 실패: $e');
     }
@@ -117,19 +134,7 @@ class _MyAppState extends State<MyApp> {
   void _showContentModal(PushMessage message) {
     final context = _navigatorKey.currentContext;
     if (context != null) {
-      // 동적 콘텐츠 처리
-      if (message.contentTypeEnum == 'dynamic_html') {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => DynamicContentModal(
-              apiUrl: message.contentUrl!,
-              title: message.title,
-            ),
-            fullscreenDialog: true,
-          ),
-        );
-        return;
-      }
+      // 동적 콘텐츠는 별도 콜백에서 처리하므로 여기서는 제외
       
       // 기존 정적 콘텐츠 처리
       ContentType contentType;
