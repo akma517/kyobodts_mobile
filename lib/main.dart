@@ -9,6 +9,7 @@ import 'services/session_manager.dart';
 import 'services/inapp_notification_service.dart';
 import 'widgets/content_modal.dart';
 import 'widgets/dynamic_content_modal.dart';
+import 'widgets/webview_modal.dart';
 import 'models/push_message.dart';
 import 'themes/theme_provider.dart';
 
@@ -119,6 +120,22 @@ class _MyAppState extends State<MyApp> {
             MaterialPageRoute(
               builder: (context) => DynamicContentModal(
                 contentUrl: data['content_url'],
+                title: data['title'],
+              ),
+              fullscreenDialog: true,
+            ),
+          );
+        }
+      };
+      
+      // 웹뷰 URL 처리 (새로운 기능)
+      FirebaseService().onWebViewRequested = (data) {
+        final context = _navigatorKey.currentContext;
+        if (context != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => WebViewModal(
+                url: data['url'],
                 title: data['title'],
               ),
               fullscreenDialog: true,

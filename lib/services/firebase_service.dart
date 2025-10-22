@@ -17,6 +17,7 @@ class FirebaseService {
   
   Function(Map<String, dynamic>)? onMessageReceived;
   Function(Map<String, dynamic>)? onDynamicContentRequested;
+  Function(Map<String, dynamic>)? onWebViewRequested;
   bool _isInitialized = false;
   bool _isInitializing = false;
 
@@ -260,15 +261,25 @@ class FirebaseService {
   void _handleDynamicContentAction(Map<String, dynamic> data) {
     try {
       final action = data['action'];
+      
       if (action == 'show_dynamic_content') {
         final contentUrl = data['content_url'];
         final contentType = data['content_type'];
         
         if (contentUrl != null && contentType == 'dynamic_html') {
           print('🔥 동적 콘텐츠 액션 감지: $contentUrl');
-          // 콜백으로 UI 레이어에 전달
           onDynamicContentRequested?.call({
             'content_url': contentUrl,
+            'title': data['title'] ?? '알림',
+          });
+        }
+      } else if (action == 'open_url') {
+        final contentUrl = data['content_url'];
+        
+        if (contentUrl != null) {
+          print('🔥 웹뷰 URL 액션 감지: $contentUrl');
+          onWebViewRequested?.call({
+            'url': contentUrl,
             'title': data['title'] ?? '알림',
           });
         }
