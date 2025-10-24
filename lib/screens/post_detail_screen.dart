@@ -119,6 +119,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     final content = _commentController.text.trim();
     _commentController.clear();
+    
+    // 키패드 내리기
+    FocusScope.of(context).unfocus();
 
     final newComment = await _postService.addComment(
       widget.post.docNumber.toString(), 
@@ -548,66 +551,72 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 ),
                               ),
                               child: Padding(
-                                padding: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Row(
-                                          children: [
-                                            Text(
-                                              comment.author,
-                                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              _formatCommentDate(comment.createdAt),
-                                              style: Theme.of(context).textTheme.bodySmall,
-                                            ),
-                                          ],
-                                        ),
-                                        if (comment.userId == _authService.currentUser?.id)
-                                          PopupMenuButton(
-                                            itemBuilder: (context) => [
-                                              const PopupMenuItem(
-                                                value: 'edit',
-                                                child: Row(
-                                                  children: [
-                                                    Icon(Icons.edit, size: 16),
-                                                    SizedBox(width: 8),
-                                                    Text('수정'),
-                                                  ],
+                                        Expanded(
+                                          child: Row(
+                                            children: [
+                                              Text(
+                                                comment.author,
+                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                  fontWeight: FontWeight.w500,
                                                 ),
                                               ),
-                                              const PopupMenuItem(
-                                                value: 'delete',
-                                                child: Row(
-                                                  children: [
-                                                    Icon(Icons.delete, size: 16),
-                                                    SizedBox(width: 8),
-                                                    Text('삭제'),
-                                                  ],
-                                                ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                _formatCommentDate(comment.createdAt),
+                                                style: Theme.of(context).textTheme.bodySmall,
                                               ),
                                             ],
-                                            onSelected: (value) {
-                                              print('PostDetailScreen: Comment action selected - $value for comment by ${comment.author} (userId: ${comment.userId})');
-                                              print('PostDetailScreen: Current user: ${_authService.currentUser?.id} (${_authService.currentUser?.name})');
-                                              
-                                              if (value == 'edit') {
-                                                _editComment(comment);
-                                              } else if (value == 'delete') {
-                                                _deleteComment(comment.id);
-                                              }
-                                            },
                                           ),
+                                        ),
+                                        SizedBox(
+                                          width: 48,
+                                          height: 48,
+                                          child: comment.userId == _authService.currentUser?.id
+                                            ? PopupMenuButton(
+                                                itemBuilder: (context) => [
+                                                  const PopupMenuItem(
+                                                    value: 'edit',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.edit, size: 16),
+                                                        SizedBox(width: 8),
+                                                        Text('수정'),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const PopupMenuItem(
+                                                    value: 'delete',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.delete, size: 16),
+                                                        SizedBox(width: 8),
+                                                        Text('삭제'),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                                onSelected: (value) {
+                                                  print('PostDetailScreen: Comment action selected - $value for comment by ${comment.author} (userId: ${comment.userId})');
+                                                  print('PostDetailScreen: Current user: ${_authService.currentUser?.id} (${_authService.currentUser?.name})');
+                                                  
+                                                  if (value == 'edit') {
+                                                    _editComment(comment);
+                                                  } else if (value == 'delete') {
+                                                    _deleteComment(comment.id);
+                                                  }
+                                                },
+                                              )
+                                            : const SizedBox.shrink(),
+                                        ),
                                       ],
                                     ),
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: 0),
                                     Text(
                                       comment.content,
                                       style: Theme.of(context).textTheme.bodyMedium,
@@ -805,6 +814,8 @@ class _EditCommentDialogState extends State<_EditCommentDialog> {
           onPressed: () {
             if (_editController.text.trim().isNotEmpty) {
               final content = _editController.text.trim();
+              // 키패드 내리기
+              FocusScope.of(context).unfocus();
               widget.onUpdate(content);
               Navigator.pop(context);
             }
