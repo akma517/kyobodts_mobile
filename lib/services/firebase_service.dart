@@ -7,6 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
+// main.dart에서 정의된 전역 변수 참조
+external dynamic _globalAppState;
+
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
   factory FirebaseService() => _instance;
@@ -210,7 +213,20 @@ class FirebaseService {
 
   void _handleMessageOpenedApp(RemoteMessage message) {
     print('📱 백그라운드 메시지 클릭: ${message.notification?.title}');
-    // 백그라운드에서는 기존처럼 웹뷰 열기
+    print('📱 메시지 데이터: ${message.data}');
+    
+    // 전역 상태를 통해 직접 처리 시도
+    try {
+      if (_globalAppState != null) {
+        print('📱 전역 상태를 통한 직접 처리');
+        _globalAppState._processMessage(message.data);
+        return;
+      }
+    } catch (e) {
+      print('📱 전역 상태 처리 실패: $e');
+    }
+    
+    print('📱 기존 콜백 체인 사용');
     _processMessageData(message.data);
   }
 
@@ -274,6 +290,7 @@ class FirebaseService {
   void _handleDynamicContentAction(Map<String, dynamic> data) {
     try {
       final action = data['action'];
+      print('🔥 동적 콘텐츠 액션 처리 시작: $action');
       
       if (action == 'show_dynamic_content') {
         final contentUrl = data['content_url'];
@@ -281,6 +298,7 @@ class FirebaseService {
         
         if (contentUrl != null && contentType == 'dynamic_html') {
           print('🔥 동적 콘텐츠 액션 감지: $contentUrl');
+          print('🔥 onDynamicContentRequested 콜백 호출 시도...');
           onDynamicContentRequested?.call({
             'content_url': contentUrl,
             'title': data['title'] ?? '알림',
@@ -291,11 +309,14 @@ class FirebaseService {
         
         if (contentUrl != null) {
           print('🔥 웹뷰 URL 액션 감지: $contentUrl');
+          print('🔥 onWebViewRequested 콜백 호출 시도...');
           onWebViewRequested?.call({
             'url': contentUrl,
             'title': data['title'] ?? '알림',
           });
         }
+      } else {
+        print('🔥 알 수 없는 액션: $action');
       }
     } catch (e) {
       print('🔥 동적 콘텐츠 처리 오류: $e');
