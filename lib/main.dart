@@ -107,7 +107,11 @@ class _MyAppState extends State<MyApp> {
           customData: data,
         );
         
-        if (message.hasContent) {
+        // 포그라운드에서는 새로운 액션들 모달 열기 생략
+        // 백그라운드에서는 전용 콜백에서 처리
+        if (message.hasContent && 
+            message.action != 'open_url' && 
+            message.action != 'show_dynamic_content') {
           _showContentModal(message);
         }
       };

@@ -76,13 +76,19 @@ class DynamicContentService {
         'jsonplaceholder.typicode.com',
       ];
       
-      // 허용된 IP 주소 목록
+      // 허용된 IP 주소 목록 (포트 포함)
       const allowedIPs = [
         '54.206.1.146',
       ];
       
-      // IP 주소 확인
-      if (allowedIPs.contains(host)) {
+      // 포트가 포함된 경우 호스트만 추출하여 확인
+      String hostOnly = host;
+      if (host.contains(':')) {
+        hostOnly = host.split(':')[0];
+      }
+      
+      // IP 주소 확인 (포트 제외)
+      if (allowedIPs.contains(hostOnly)) {
         return true;
       }
       

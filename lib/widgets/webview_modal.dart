@@ -77,6 +77,25 @@ class _WebViewModalState extends State<WebViewModal> {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _isLoading = true;
+                  _errorMessage = null;
+                });
+                _webViewController?.reload();
+              },
+              child: const Text('다시 시도'),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'URL: ${widget.url}',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey,
+              ),
+            ),
           ],
         ),
       );
@@ -91,12 +110,17 @@ class _WebViewModalState extends State<WebViewModal> {
               useShouldOverrideUrlLoading: true,
               mediaPlaybackRequiresUserGesture: false,
               javaScriptEnabled: true,
+              resourceCustomSchemes: [],
+              allowUniversalAccessFromFileURLs: false,
+              allowFileAccessFromFileURLs: false,
             ),
             android: AndroidInAppWebViewOptions(
               useHybridComposition: true,
             ),
             ios: IOSInAppWebViewOptions(
               allowsInlineMediaPlayback: true,
+              allowsAirPlayForMediaPlayback: true,
+              allowsPictureInPictureMediaPlayback: true,
             ),
           ),
           onWebViewCreated: (controller) {
@@ -113,9 +137,18 @@ class _WebViewModalState extends State<WebViewModal> {
             });
           },
           onReceivedError: (controller, request, error) {
+            print('🚫 WebView 오류: ${error.description} (${error.type})');
+            print('🚫 요청 URL: ${request.url}');
+            
             setState(() {
               _isLoading = false;
-              _errorMessage = '페이지를 불러올 수 없습니다';
+              if (error.type == -1001) {
+                _errorMessage = '서버 연결 시간이 초과되었습니다\n\n서버가 실행 중인지 확인해주세요';
+              } else if (error.type == -1003) {
+                _errorMessage = '서버를 찾을 수 없습니다\n\nURL을 확인해주세요';
+              } else {
+                _errorMessage = '페이지를 불러올 수 없습니다\n\n오류: ${error.description}';
+              }
             });
           },
           shouldOverrideUrlLoading: (controller, navigationAction) async {

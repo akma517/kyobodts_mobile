@@ -11,6 +11,7 @@ import '../services/session_manager.dart';
 import '../themes/theme_provider.dart';
 import '../themes/app_theme.dart';
 import '../widgets/content_modal.dart';
+import '../widgets/webview_modal.dart';
 import '../utils/push_test_helper.dart';
 import '../widgets/common_app_bar.dart';
 import 'post_list_screen.dart';
@@ -151,6 +152,18 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
         contentType: contentType,
       );
     }
+  }
+  
+  void _openGroupwareNews() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const WebViewModal(
+          url: 'http://54.206.1.146:5001/summary',
+          title: '',
+        ),
+        fullscreenDialog: true,
+      ),
+    );
   }
   
 
@@ -365,25 +378,28 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
                 ),
               ),
             ),
-      floatingActionButton: kDebugMode ? Column(
+      floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (kDebugMode) ...[
+            FloatingActionButton(
+              heroTag: "show_token",
+              mini: true,
+              onPressed: _showFCMToken,
+              backgroundColor: Colors.blue,
+              child: const Icon(Icons.token),
+            ),
+            const SizedBox(height: 8),
+          ],
           FloatingActionButton(
-            heroTag: "show_token",
+            heroTag: "groupware_news",
             mini: true,
-            onPressed: _showFCMToken,
-            backgroundColor: Colors.blue,
-            child: const Icon(Icons.token),
-          ),
-          const SizedBox(height: 8),
-          FloatingActionButton(
-            heroTag: "test_push",
-            mini: true,
-            onPressed: _testPushNotification,
-            child: const Icon(Icons.notifications),
+            onPressed: _openGroupwareNews,
+            backgroundColor: Colors.green,
+            child: const Icon(Icons.web),
           ),
         ],
-      ) : null,
+      ),
     );
   }
 

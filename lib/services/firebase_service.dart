@@ -192,12 +192,25 @@ class FirebaseService {
 
   void _handleForegroundMessage(RemoteMessage message) {
     print('📱 포그라운드 메시지 수신: ${message.notification?.title}');
-    // 포그라운드에서도 알림 표시
+    
+    // 포그라운드에서는 로컬 알림만 표시
     _showLocalNotification(message);
-    _processMessageData(message.data);
+    
+    // 새로운 액션들은 포그라운드에서 웹뷰 열기 생략
+    final action = message.data['action'];
+    if (action == 'open_url' || action == 'show_dynamic_content') {
+      print('📱 포그라운드에서 웹뷰 열기 생략: $action');
+      // 기존 onMessageReceived 콜백만 호출 (인앱 알림 저장용)
+      onMessageReceived?.call(message.data);
+    } else {
+      // 기존 액션들은 그대로 처리
+      _processMessageData(message.data);
+    }
   }
 
   void _handleMessageOpenedApp(RemoteMessage message) {
+    print('📱 백그라운드 메시지 클릭: ${message.notification?.title}');
+    // 백그라운드에서는 기존처럼 웹뷰 열기
     _processMessageData(message.data);
   }
 
@@ -377,6 +390,8 @@ class FirebaseService {
 
 @pragma('vm:entry-point')
 Future<void> _handleBackgroundMessage(RemoteMessage message) async {
+  print('📱 백그라운드 메시지 수신: ${message.notification?.title}');
+  
   if (defaultTargetPlatform == TargetPlatform.android) {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
@@ -399,4 +414,7 @@ Future<void> _handleBackgroundMessage(RemoteMessage message) async {
   } else {
     await Firebase.initializeApp();
   }
+  
+  // 백그라운드에서는 메시지 데이터만 처리 (웹뷰는 앱 열릴 때 처리)
+  print('📱 백그라운드 메시지 데이터: ${message.data}');
 }
