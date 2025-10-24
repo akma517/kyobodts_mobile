@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  kyobodts-push-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kyobodts-push-server
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=False
+      # 🔐 보안 강화: 환경변수로 Firebase 키 전달
+      - FIREBASE_SERVICE_ACCOUNT_BASE64=${FIREBASE_SERVICE_ACCOUNT_BASE64}
+    volumes:
+      # 로그 파일을 호스트에 마운트 (선택사항)
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# 🚀 AWS 배포용 서비스 (이미지 기반)
+  push-backend:
+    image: akma517/kyobodts-push-backend
+    container_name: kyobodts-push-backend
+    ports:
+      - "5001:5000"  # 포트 충돌 방지
+    environment:
+      - FIREBASE_SERVICE_ACCOUNT_BASE64=${FIREBASE_SERVICE_ACCOUNT_BASE64}
+    restart: unless-stopped
+    profiles:
+      - production  # docker-compose --profile production up -d

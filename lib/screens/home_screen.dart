@@ -11,9 +11,8 @@ import '../widgets/custom_bottom_navigation.dart';
 import '../widgets/custom_floating_action_button.dart';
 import '../widgets/popup_webview.dart';
 import '../widgets/content_modal.dart';
-import '../utils/push_test_helper.dart';
-import '../models/push_message.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/common_app_bar.dart';
+
 
 bool isAppLoading = true;
 
@@ -40,6 +39,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: const CommonAppBar(
+        title: '교보DTS',
+        showBackButton: false,
+      ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -71,35 +74,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (kDebugMode) ...[
-            FloatingActionButton(
-              heroTag: "show_token",
-              mini: true,
-              onPressed: _showFCMToken,
-              backgroundColor: Colors.blue,
-              child: const Icon(Icons.token),
-            ),
-            const SizedBox(height: 8),
-            FloatingActionButton(
-              heroTag: "test_push",
-              mini: true,
-              onPressed: _testPushNotification,
-              child: const Icon(Icons.notifications),
-            ),
-          ],
-          const SizedBox(height: 8),
-          CustomFloatingActionButton(
-            webViewController: _webViewController,
-            isLoginPage: _isLoginPage,
-          ),
-        ],
+      floatingActionButton: CustomFloatingActionButton(
+        webViewController: _webViewController,
+        isLoginPage: _isLoginPage,
       ),
       bottomNavigationBar: CustomBottomNavigation(
         webViewController: _webViewController,
-        onRefresh: () => setState(() {}),
+        onRefresh: () {
+          if (mounted) setState(() {});
+        },
       ),
     );
   }
@@ -121,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final systemType = WebViewService.getSystemTypeFromUrl(sURL);
     final isLoginPage = WebViewService.isLoginPage(sURL);
     
-    if (_isLoginPage != isLoginPage) {
+    if (_isLoginPage != isLoginPage && mounted) {
       setState(() {
         _isLoginPage = isLoginPage;
       });
@@ -139,6 +122,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (loginInfo.isAutoLogin && !_autoLoginExecuted.contains(loginKey)) {
         _autoLoginExecuted.add(loginKey);
         WebViewService.executeAutoLogin(_webViewController!, systemType, loginInfo);
+        
+        // 로그인 성공 후 화면 새로고침으로 AppBar 상태 업데이트
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) setState(() {});
+        });
       }
     }
   }
@@ -175,50 +163,5 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showFCMToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('fcm_token') ?? '토큰이 없습니다';
-    
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('FCM 토큰'),
-          content: SelectableText(token),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('닫기'),
-            ),
-          ],
-        ),
-      );
-    }
-  }
 
-  void _testPushNotification() async {
-    final data = PushTestHelper.getSamplePushData();
-    final message = PushMessage.fromMap(data);
-    
-    if (message.hasContent) {
-      ContentType contentType;
-      switch (message.contentTypeEnum) {
-        case 'pdf':
-          contentType = ContentType.pdf;
-          break;
-        case 'asset':
-          contentType = ContentType.asset;
-          break;
-        default:
-          contentType = ContentType.html;
-      }
-
-      ContentModalHelper.showContentModal(
-        context,
-        contentUrl: message.contentUrl!,
-        title: message.title,
-        contentType: contentType,
-      );
-    }
-  }
 }

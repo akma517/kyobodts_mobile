@@ -31,10 +31,13 @@ class _ContentModalState extends State<ContentModal> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.title),
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
+          automaticallyImplyLeading: false,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
         ),
         body: Stack(
           children: [

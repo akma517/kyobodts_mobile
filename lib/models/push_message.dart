@@ -3,6 +3,7 @@ class PushMessage {
   final String body;
   final String? contentUrl;
   final String? contentType;
+  final String? action;
   final Map<String, dynamic> data;
 
   PushMessage({
@@ -10,6 +11,7 @@ class PushMessage {
     required this.body,
     this.contentUrl,
     this.contentType,
+    this.action,
     required this.data,
   });
 
@@ -19,6 +21,7 @@ class PushMessage {
       body: map['body'] ?? '',
       contentUrl: map['content_url'],
       contentType: map['content_type'],
+      action: map['action'],
       data: map,
     );
   }
