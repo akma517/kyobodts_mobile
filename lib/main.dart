@@ -14,7 +14,7 @@ import 'widgets/webview_modal.dart';
 import 'models/push_message.dart';
 import 'themes/theme_provider.dart';
 
-// 전역 메시지 처리 함수
+// 전역 메시지 처리 함수 
 MyAppState? _globalAppState;
 
 void main() async {
