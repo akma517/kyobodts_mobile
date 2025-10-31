@@ -179,12 +179,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  'Test ID: test, PW: 1234',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
-                ),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.1),
               ],
             ),

@@ -378,28 +378,6 @@ class _NewHomeScreenState extends State<NewHomeScreen> {
                 ),
               ),
             ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (kDebugMode) ...[
-            FloatingActionButton(
-              heroTag: "show_token",
-              mini: true,
-              onPressed: _showFCMToken,
-              backgroundColor: Colors.blue,
-              child: const Icon(Icons.token),
-            ),
-            const SizedBox(height: 8),
-          ],
-          FloatingActionButton(
-            heroTag: "groupware_news",
-            mini: true,
-            onPressed: _openGroupwareNews,
-            backgroundColor: Colors.green,
-            child: const Icon(Icons.web),
-          ),
-        ],
-      ),
     );
   }
 

@@ -8,7 +8,7 @@ import '../constants/webview_config.dart';
 import '../services/webview_service.dart';
 import '../services/preferences_service.dart';
 import '../widgets/custom_bottom_navigation.dart';
-import '../widgets/custom_floating_action_button.dart';
+
 import '../widgets/popup_webview.dart';
 import '../widgets/content_modal.dart';
 import '../widgets/common_app_bar.dart';
@@ -74,10 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      floatingActionButton: CustomFloatingActionButton(
-        webViewController: _webViewController,
-        isLoginPage: _isLoginPage,
-      ),
+
       bottomNavigationBar: CustomBottomNavigation(
         webViewController: _webViewController,
         onRefresh: () {

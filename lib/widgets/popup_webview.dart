@@ -7,7 +7,7 @@ import '../constants/webview_config.dart';
 import '../services/webview_service.dart';
 import '../services/preferences_service.dart';
 import 'custom_bottom_navigation.dart';
-import 'custom_floating_action_button.dart';
+
 
 class PopupWebView extends StatefulWidget {
   final int windowId;
@@ -65,10 +65,7 @@ class _PopupWebViewState extends State<PopupWebView> {
         webViewController: _webViewController,
         onRefresh: () => setState(() {}),
       ),
-      floatingActionButton: CustomFloatingActionButton(
-        webViewController: _webViewController,
-        isLoginPage: _isLoginPage,
-      ),
+
     );
   }
 

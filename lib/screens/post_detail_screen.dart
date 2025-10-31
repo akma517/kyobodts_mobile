@@ -9,7 +9,7 @@ import '../services/file_service.dart';
 import '../services/comment_service.dart';
 import '../services/attachment_service.dart';
 import '../widgets/common_app_bar.dart';
-import '../widgets/html_content_widget.dart';
+import '../widgets/selectable_content_widget.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final Post post;
@@ -263,7 +263,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                SelectableText(
                                   widget.post.title,
                                   style: TextStyle(
                                     fontSize: 22,
@@ -298,14 +298,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(
+                                            SelectableText(
                                               widget.post.author,
                                               style: TextStyle(
                                                 fontWeight: FontWeight.w600,
                                                 color: Theme.of(context).colorScheme.onSurface,
                                               ),
                                             ),
-                                            Text(
+                                            SelectableText(
                                               _formatDate(widget.post.createdAt),
                                               style: TextStyle(
                                                 fontSize: 12,
@@ -387,7 +387,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           // 본문 섹션
                           Padding(
                             padding: const EdgeInsets.all(20),
-                            child: HtmlContentWidget(
+                            child: SelectableContentWidget(
                               htmlContent: widget.post.content,
                               defaultTextStyle: TextStyle(
                                 fontSize: 16,
@@ -560,14 +560,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                         Expanded(
                                           child: Row(
                                             children: [
-                                              Text(
+                                              SelectableText(
                                                 comment.author,
                                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                               ),
                                               const SizedBox(width: 8),
-                                              Text(
+                                              SelectableText(
                                                 _formatCommentDate(comment.createdAt),
                                                 style: Theme.of(context).textTheme.bodySmall,
                                               ),
@@ -617,7 +617,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 0),
-                                    Text(
+                                    SelectableText(
                                       comment.content,
                                       style: Theme.of(context).textTheme.bodyMedium,
                                     ),
